@@ -1,8 +1,8 @@
 # LOCAL ARTIFACTS
 data/
 !data/.gitkeep
-gan/results
-!gan/results/.gitkeep
+transformer/results
+!transformer/results/.gitkeep
 stable_diffusion/results
 !stable_diffusion/results/.gitkeep
 
