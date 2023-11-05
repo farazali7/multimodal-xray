@@ -101,3 +101,4 @@ class ViTEncoder(nn.Module):
         x = self.enc_layers(x)
 
         return x
+
