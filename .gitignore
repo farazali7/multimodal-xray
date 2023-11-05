@@ -1,10 +1,8 @@
 # LOCAL ARTIFACTS
 data/
 !data/.gitkeep
-transformer/results
-!transformer/results/.gitkeep
-stable_diffusion/results
-!stable_diffusion/results/.gitkeep
+results/
+results/.gitkeep
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
