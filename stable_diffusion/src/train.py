@@ -1,3 +1,0 @@
-'''
-TRAINING SCRIPT
-'''
