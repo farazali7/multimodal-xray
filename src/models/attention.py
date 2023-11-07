@@ -156,8 +156,18 @@ class FastAttentionBlock(nn.Module):
         q = create_sm_kernel(q, is_query=True)
         k = create_sm_kernel(k, is_query=False)
 
-        # Perform normal attention
-        out = q  # NOT IMPLEMENTED
+        # Perform normal, non-causal attention
+        # Since the above q and k are now linear in their matmul for approximating the softmax scores,
+        # we can choose to matmul our keys with values first to lower dim from sequence len n
+        # to dimensionality d x e
+        # Inner product of keys and values
+        context = torch.einsum('...nd,...ne -> ...de', k, v)
+
+        # Compute norm factor for softmax
+        D_inv = 1. / torch.einsum('...nd,...d -> ...n', q, k.sum(dim=-2).type_as(q))
+
+        # Outer product of queries and values with normalization also done
+        out = torch.einsum('...de,...nd,...n -> ...ne', context, q, D_inv)
 
         return out
 
