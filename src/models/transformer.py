@@ -1,5 +1,7 @@
 import torch.nn as nn
 
+from src.models.attention import MultiHeadAttentionBlock
+
 
 class FeedForwardNetwork(nn.Module):
     def __init__(self, embed_dim: int, hidden_dim: int, dropout: float = 0.0):
@@ -25,23 +27,6 @@ class FeedForwardNetwork(nn.Module):
         x = self.dropout_2(x)
 
         return x
-
-
-class MultiHeadAttentionBlock(nn.Module):
-    def __init__(self, embed_dim: int, n_heads: int):
-        """ Multi-headed self-attention block
-
-        Args:
-            embed_dim: Dimensionality of input sequence
-            n_heads: Number of parallel heads in attention block
-        """
-        super(MultiHeadAttentionBlock, self).__init__()
-        self.mha = nn.MultiheadAttention(embed_dim, num_heads=n_heads)
-
-    def forward(self, x):
-        mha_out = self.mha(x, x, x)[0]  # Returns (output, weights)
-
-        return mha_out
 
 
 class ViTEncoderLayer(nn.Module):

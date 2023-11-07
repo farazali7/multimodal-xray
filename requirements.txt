@@ -3,3 +3,5 @@ torchvision==0.16.0
 pandas==2.1.2
 numpy==1.26.1
 matplotlib==3.8.1
+transformers==4.35.0
+einops==0.7.0
