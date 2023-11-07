@@ -133,12 +133,12 @@ class FastAttentionBlock(nn.Module):
         # Create matrix of randomly sampled, orthogonal feature vectors
         self.create_projection = partial(gaussian_orthogonal_random_matrix,
                                          n_rows=self.n_features, n_cols=self.dim_heads)
-        self.projection_matrix = self.create_projection()
+        projection_matrix = self.create_projection()
 
         # This registers a 'buffer' for the model, which is nothing but a parameter that is serialized along
         # with the model and stored in the state_dict. Buffers aren't listed in model.parameters() and thus, are
         # not updated with gradients during training.
-        self.register_buffer('projection_matrix', self.projection_matrix)
+        self.register_buffer('projection_matrix', projection_matrix)
 
     @torch.no_grad()
     def redraw_projection_matrix(self, device):
