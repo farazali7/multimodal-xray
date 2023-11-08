@@ -85,7 +85,8 @@ class ViTEncoder(nn.Module):
         super(ViTEncoder, self).__init__()
 
         self.enc_layers = nn.Sequential(
-            *[ViTEncoderLayer(embed_dim, hidden_dim, n_heads, dropout) for _ in range(n_layers)]
+            *[ViTEncoderLayer(embed_dim, hidden_dim, n_heads, dropout,
+                              attention_type, n_features) for _ in range(n_layers)]
         )
         self.dropout = nn.Dropout(dropout)
 
