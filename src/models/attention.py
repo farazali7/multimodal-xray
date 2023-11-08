@@ -1,13 +1,14 @@
 import torch.nn as nn
 import torch
 from einops import repeat
+from typing import Optional
 
 from functools import partial
 
 from src.utils.constants import EPS
 
 
-def orthogonal_matrix_chunk(size, device=None) -> torch.Tensor:
+def orthogonal_matrix_chunk(size: int, device: Optional[str]=None) -> torch.Tensor:
     """Create a square orthogonal matrix via QR-decomposition.
 
     Args:
@@ -23,7 +24,7 @@ def orthogonal_matrix_chunk(size, device=None) -> torch.Tensor:
     return q.to(device).t()
 
 
-def gaussian_orthogonal_random_matrix(n_rows, n_cols, device=None) -> torch.Tensor:
+def gaussian_orthogonal_random_matrix(n_rows: int, n_cols: int, device: Optional[str]=None) -> torch.Tensor:
     """Create matrix of values drawn from a gaussian random distribution with entire matrix being orthogonal.
 
     Args:
@@ -65,7 +66,7 @@ def gaussian_orthogonal_random_matrix(n_rows, n_cols, device=None) -> torch.Tens
     return multiplier @ final_matrix
 
 
-def softmax_kernel(data, projection_matrix, is_query) -> torch.Tensor:
+def softmax_kernel(data: torch.Tensor, projection_matrix: torch.Tensor, is_query: bool) -> torch.Tensor:
     """Approximate the SoftMax kernel through the kernel trick using the definition for the kernel
     provided in the Performer paper: https://arxiv.org/pdf/2009.14794v4.pdf.
 
@@ -111,8 +112,8 @@ def softmax_kernel(data, projection_matrix, is_query) -> torch.Tensor:
     return data_projected.type_as(data)
 
 
-class FastAttentionBlock(nn.Module):
-    def __init__(self, dim_heads, n_features):
+class FastAttention(nn.Module):
+    def __init__(self, dim_heads: int, n_features: int):
         """Implements multi-headed approximation of soft-max attention from Performer
         paper: https://arxiv.org/pdf/2009.14794v4.pdf
         and
@@ -125,7 +126,7 @@ class FastAttentionBlock(nn.Module):
             dim_heads: Dimensionality of each head
             n_features: Number of orthogonal features to use in approximation (more features -> more accurate)
         """
-        super(FastAttentionBlock, self).__init__()
+        super(FastAttention, self).__init__()
 
         self.dim_heads = dim_heads
         self.n_features = n_features
@@ -164,11 +165,10 @@ class FastAttentionBlock(nn.Module):
         # Compute norm factor for softmax
         D_inv = 1. / torch.einsum('...nd,...d -> ...n', q, k.sum(dim=-2).type_as(q))
 
-        # Outer product of queries and values with normalization also done
+        # Outer product of queries and values with normalization
         out = torch.einsum('...de,...nd,...n -> ...ne', context, q, D_inv)
 
         return out
-
 
 class MultiHeadAttentionBlock(nn.Module):
     def __init__(self, embed_dim: int, n_heads: int):
