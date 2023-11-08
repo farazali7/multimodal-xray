@@ -94,7 +94,7 @@ def softmax_kernel(data, projection_matrix, is_query) -> torch.Tensor:
     data_projected = torch.einsum('...id,...jd -> ...ij', (data_scale * data), projection)
 
     # Compute the norm of the data: [B, H, T, Dh=1]
-    data_norm = (torch.sum(data ** 2, dim=-1) / 2.0) * (data_scale ** 2).unsqueeze(dim=-1)
+    data_norm = ((torch.sum(data ** 2, dim=-1) / 2.0) * (data_scale ** 2)).unsqueeze(dim=-1)
 
     # Determine idx of max value across all values for each sequence if this is a query
     # otherwise find idx of max value across all sequences for each head
@@ -147,10 +147,8 @@ class FastAttentionBlock(nn.Module):
         del projections
 
     def forward(self, q, k, v):
-        device = q.device
-
         # Create softmax approximation kernel
-        create_sm_kernel = partial(softmax_kernel, projection_matrix=self.projection_matrix, device=device)
+        create_sm_kernel = partial(softmax_kernel, projection_matrix=self.projection_matrix)
 
         # Generate query and key projections in softmax kernel subspace
         q = create_sm_kernel(q, is_query=True)
