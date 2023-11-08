@@ -214,24 +214,25 @@ class MultiHeadFastAttention(nn.Module):
 
 
 class MultiHeadAttentionBlock(nn.Module):
-    def __init__(self, embed_dim: int, n_heads: int, attention_type: str = 'fast'):
+    def __init__(self, embed_dim: int, n_heads: int, attention_type: str = 'fast',
+                 n_features: Optional[int] = None, dropout: float = 0.3):
         """ Multi-headed attention block
 
         Args:
             embed_dim: Dimensionality of input sequence
             n_heads: Number of parallel heads in attention block
             attention_type: String specifying attention mechanism, one of {'normal', 'fast'}
+            n_features: Number of orthogonal features to use in approximation (more features -> more accurate)
         """
         super(MultiHeadAttentionBlock, self).__init__()
 
         if attention_type == 'normal':
-            attn_layer = nn.MultiheadAttention
+            self.mha = nn.MultiheadAttention(embed_dim, num_heads=n_heads, dropout=dropout)
         elif attention_type == 'fast':
-            attn_layer = MultiHeadFastAttention
+            assert n_features is not None, 'Parameter \'n_features\' must be supplied for FastAttention.'
+            self.mha = MultiHeadFastAttention(embed_dim, n_heads, n_features, dropout=dropout)
         else:
             raise Exception(f'Attention type: {attention_type} not supported.')
-
-        self.mha = attn_layer(embed_dim, num_heads=n_heads)
 
     def forward(self, q, k, v):
         mha_out = self.mha(q, k, v)[0]  # Returns (output, weights)
