@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from einops import repeat
+from einops import repeat, rearrange
 from typing import Optional
 
 from functools import partial
@@ -8,7 +8,7 @@ from functools import partial
 from src.utils.constants import EPS
 
 
-def orthogonal_matrix_chunk(size: int, device: Optional[str]=None) -> torch.Tensor:
+def orthogonal_matrix_chunk(size: int, device: Optional[str] = None) -> torch.Tensor:
     """Create a square orthogonal matrix via QR-decomposition.
 
     Args:
@@ -24,7 +24,7 @@ def orthogonal_matrix_chunk(size: int, device: Optional[str]=None) -> torch.Tens
     return q.to(device).t()
 
 
-def gaussian_orthogonal_random_matrix(n_rows: int, n_cols: int, device: Optional[str]=None) -> torch.Tensor:
+def gaussian_orthogonal_random_matrix(n_rows: int, n_cols: int, device: Optional[str] = None) -> torch.Tensor:
     """Create matrix of values drawn from a gaussian random distribution with entire matrix being orthogonal.
 
     Args:
@@ -39,7 +39,7 @@ def gaussian_orthogonal_random_matrix(n_rows: int, n_cols: int, device: Optional
     # This algorithm decomposes a matrix A (M x d), into matrices Q (M x M) and R (M x d),
     # where Q is orthogonal and R is upper-triangular.
     # Since it only works on square matrices, the desired orf must be made in square chunks.
-    n_full_blocks = int(n_rows/n_cols)
+    n_full_blocks = int(n_rows / n_cols)
 
     blocks = []
 
@@ -170,16 +170,68 @@ class FastAttention(nn.Module):
 
         return out
 
+
+class MultiHeadFastAttention(nn.Module):
+    def __init__(self, input_dim: int, n_heads: int, n_features: int, dropout: float = 0.3):
+        """Implements Performer attention on Multi-headed attention.
+
+        Args:
+            input_dim: Input dimensionality of each sequence
+            n_heads: Number of parallel heads
+            n_features: Number of orthogonal features to use in approximation (more features -> more accurate)
+            dropout: Rate of dropouts in feed forward networks
+        """
+        super(MultiHeadFastAttention, self).__init__()
+
+        assert input_dim % n_heads == 0, \
+            f'Provided dimensionality {input_dim} does not divide evenly among {n_heads} heads.'
+
+        self.dim_heads = input_dim // n_heads
+        self.n_heads = n_heads
+
+        self.fast_attention = FastAttention(self.dim_heads, n_features)
+
+        self.to_out = nn.Linear(input_dim, input_dim)
+
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, q, k, v):
+        # q, k, v shape is [B, T, D]
+        # Rearrange each to have shape [B, H, T, Dh]
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.n_heads), (q, k, v))
+
+        # Performer attention mechanism
+        out = self.fast_attention(q, k, v)
+
+        # Concatenate the output of each head
+        out = rearrange(out, 'b h n d -> b n (h d)')
+
+        # Project output [B, T, D]
+        out = self.to_out(out)
+        out = self.dropout(out)
+
+        return out, self.fast_attention.projection_matrix
+
+
 class MultiHeadAttentionBlock(nn.Module):
-    def __init__(self, embed_dim: int, n_heads: int):
+    def __init__(self, embed_dim: int, n_heads: int, attention_type: str = 'fast'):
         """ Multi-headed attention block
 
         Args:
             embed_dim: Dimensionality of input sequence
             n_heads: Number of parallel heads in attention block
+            attention_type: String specifying attention mechanism, one of {'normal', 'fast'}
         """
         super(MultiHeadAttentionBlock, self).__init__()
-        self.mha = nn.MultiheadAttention(embed_dim, num_heads=n_heads)
+
+        if attention_type == 'normal':
+            attn_layer = nn.MultiheadAttention
+        elif attention_type == 'fast':
+            attn_layer = MultiHeadFastAttention
+        else:
+            raise Exception(f'Attention type: {attention_type} not supported.')
+
+        self.mha = attn_layer(embed_dim, num_heads=n_heads)
 
     def forward(self, q, k, v):
         mha_out = self.mha(q, k, v)[0]  # Returns (output, weights)
