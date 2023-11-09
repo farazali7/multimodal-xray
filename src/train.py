@@ -83,6 +83,3 @@ class TransformerGenModel:
         plt.xlabel('epochs')
         plt.ylabel('Train Loss')
         plt.show()
-
-    
-

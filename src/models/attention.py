@@ -238,3 +238,28 @@ class MultiHeadAttentionBlock(nn.Module):
         mha_out = self.mha(q, k, v)[0]  # Returns (output, weights)
 
         return mha_out
+
+
+class SinusoidalPositionalEmbeddings(nn.Module):
+    def __init__(self, embedding_dim: int, max_seq_len: int = 512):
+        """Apply sinusoidal positional embeddings (alternates between sin and cos waves based on position).
+
+        Args:
+            embedding_dim: Dimensionality of input tensor
+            max_seq_len: Maximum length of a single sequence
+        """
+        super(SinusoidalPositionalEmbeddings, self).__init__()
+
+        inv_freq = 1. / (10000 ** (torch.arange(0, embedding_dim, 2).float() / embedding_dim))
+        position = torch.arange(0, max_seq_len, dtype=torch.float)
+        sinusoid_inp = torch.einsum("i, j -> ij", position, inv_freq)
+        positional_emb = torch.cat((sinusoid_inp.sin(), sinusoid_inp.cos()), dim=-1)
+        self.positional_emb = nn.Parameter(positional_emb)
+
+    def forward(self, x):
+        batch_size, seq_len, _ = x.size()
+
+        # Slice and select positional embeddings according to the input sequence length
+        embeddings = self.positional_emb[None, :seq_len, :].to(x)
+
+        return embeddings
