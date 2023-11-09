@@ -1,4 +1,7 @@
 import torch.nn as nn
+from typing import Optional
+
+from src.models.attention import MultiHeadAttentionBlock
 
 
 class FeedForwardNetwork(nn.Module):
@@ -27,25 +30,9 @@ class FeedForwardNetwork(nn.Module):
         return x
 
 
-class MultiHeadAttentionBlock(nn.Module):
-    def __init__(self, embed_dim: int, n_heads: int):
-        """ Multi-headed self-attention block
-
-        Args:
-            embed_dim: Dimensionality of input sequence
-            n_heads: Number of parallel heads in attention block
-        """
-        super(MultiHeadAttentionBlock, self).__init__()
-        self.mha = nn.MultiheadAttention(embed_dim, num_heads=n_heads)
-
-    def forward(self, x):
-        mha_out = self.mha(x, x, x)[0]  # Returns (output, weights)
-
-        return mha_out
-
-
 class ViTEncoderLayer(nn.Module):
-    def __init__(self, embed_dim: int, hidden_dim: int, n_heads: int, dropout: float = 0.0):
+    def __init__(self, embed_dim: int, hidden_dim: int, n_heads: int, dropout: float = 0.0,
+                 attention_type: str = 'fast',  n_features: Optional[int] = None):
         """ Vision Transformer Encoder layer.
 
         Args:
@@ -53,11 +40,16 @@ class ViTEncoderLayer(nn.Module):
             hidden_dim: Dimensionality of hidden layers in feed forward network
             n_heads: Number of parallel heads in attention block
             dropout: Amount of dropout in feed forward network
+            attention_type: String specifying attention mechanism, one of {'normal', 'fast'}
+            n_features: Number of orthogonal features to use in approximation (more features -> more accurate)
         """
         super(ViTEncoderLayer, self).__init__()
 
         self.layer_norm_1 = nn.LayerNorm(embed_dim)
-        self.mha = MultiHeadAttentionBlock(embed_dim, n_heads)
+        self.mha = MultiHeadAttentionBlock(embed_dim, n_heads,
+                                           attention_type=attention_type,
+                                           dropout=dropout,
+                                           n_features=n_features)
         self.layer_norm_2 = nn.LayerNorm(embed_dim)
         self.ffn = FeedForwardNetwork(embed_dim, hidden_dim, dropout)
 
@@ -74,7 +66,8 @@ class ViTEncoderLayer(nn.Module):
 
 
 class ViTEncoder(nn.Module):
-    def __init__(self, embed_dim: int, hidden_dim: int, n_heads: int, n_layers: int, dropout: float = 0.0):
+    def __init__(self, embed_dim: int, hidden_dim: int, n_heads: int, n_layers: int, dropout: float = 0.0,
+                 attention_type: str = 'fast',  n_features: Optional[int] = None):
         """ Vision Transformer Encoder which returns embeddings (no cls output).
 
         Implements the original Vision Transformer encoder but ignores the class token to only
@@ -86,11 +79,14 @@ class ViTEncoder(nn.Module):
             n_heads: Number of heads for multi-head attention
             n_layers: Number of stacked attention layers
             dropout: Amount of dropout for all feed forward networks and on input
+            attention_type: String specifying attention mechanism, one of {'normal', 'fast'}
+            n_features: Number of orthogonal features to use in approximation (more features -> more accurate)
         """
         super(ViTEncoder, self).__init__()
 
         self.enc_layers = nn.Sequential(
-            *[ViTEncoderLayer(embed_dim, hidden_dim, n_heads, dropout) for _ in range(n_layers)]
+            *[ViTEncoderLayer(embed_dim, hidden_dim, n_heads, dropout,
+                              attention_type, n_features) for _ in range(n_layers)]
         )
         self.dropout = nn.Dropout(dropout)
 
