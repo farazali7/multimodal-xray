@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class Upsample(nn.Module):
     def __init__(self, inchn:int,outchn:int,mid=None):
@@ -88,16 +89,24 @@ class Decoder(nn.Module):
         
         Args:
         x - Input image
-        s1 - Firt sequence (image encodings)
+        s1 - First sequence (image encodings)
         s2 - Second sequence of same length (text embedding)
         
         """
         
         if self.attn:
             x = self.Attention(s1,s2)
-            x = x.unsqueeze(0)
-        #print(x.size())
-        x = self.UpLayers(x) 
+
+        # GAP
+        x = torch.mean(x, dim=1)
+
+        # Reshape to a square image
+        sz = int(self.emb ** 0.5)
+        x = torch.reshape(x, (x.shape[0], sz, sz))
+
+        # Add channel dim
+        x = x.unsqueeze(1)
+        x = self.UpLayers(x)
         x = self.mp(x)
         x = self.final(x)
         
