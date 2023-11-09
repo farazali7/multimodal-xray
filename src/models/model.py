@@ -44,7 +44,7 @@ class ModelV1(nn.Module):
     def forward(self, x_img, x_txt):
         # Assume x_img is of shape [B, H, W] and x_txt is of shape [B, ?, ?]
 
-        # Encode image [B, H', W', Di], Di = 2048 right now without projection
+        # Encode image [B, H', W', Di]
         image_embeddings = self.image_encoder(x_img)
 
         # [B, T, Di]
@@ -59,12 +59,12 @@ class ModelV1(nn.Module):
         vit_embeddings = self.vit_encoder(image_embeddings)
 
         # Tokenize and encode report
-        # [B, T, Dt], Dt = 128 right now (includes projection)
+        # [B, T, Dt]
         report_embeddings = get_text_embeddings(x_txt, self.text_tokenizer, self.text_encoder,
                                                 max_pad_len=vit_embeddings.shape[1])
 
         # Project image and text sequences to same dimensionality
-        # Image & text embeddings shape [B, T, Dp], Dp = 128
+        # Image & text embeddings shape [B, T, Dp]
         vit_embeddings = self.image_projector(vit_embeddings)
         report_embeddings = self.text_projector(report_embeddings)
 
