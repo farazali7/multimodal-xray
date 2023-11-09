@@ -5,81 +5,62 @@ TRAINING SCRIPT
 import numpy as np
 import matplotlib.pyplot as plt
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data import DataLoader
-from models.cross_attention import CrossAttentionBlock
-
-class TransformerGenModel:
-    def __init__(self, learning_rate, num_iter):
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        #TODO: train_dataset = # the training data
-        #TODO: train_loader = DataLoader(dataset=train_dataset, batch_size=32, shuffle=True)
-        self.learning_rate = learning_rate
-        self.num_iter = num_iter
-
-        #TODO: initialize other model components: encoder, bert, decoder
-        self.encoder = Encoder().to(device)
-        self.cross_attn = CrossAttentionBlock().to(device)
-        self.bert = BertModel().to(device)
-        self.decoder = Decoder().to(device)
-
-        # TODO: Define the loss function - Ask Faraz if MSE loss is good to compare 2 imgs
-        self.mse_loss = nn.MSELoss()
-
-        # Optimizer
-        params = list(encoder.parameters()) + list(cross_attn.parameters()) + list(bert.parameters()) + list(decoder.parameters())
-        self.optimizer = optim.Adam(params, lr=0.001)
+from src.models.model import FinalModel
+import lightning as L
 
 
-    def train(self):
-        loss_array = []
+from config import cfg
 
-        for i in range(self.num_iter):
-            for i, (input_data, target_data) in enumerate(train_loader):
-                # Move data to the appropriate device
-                input_data = input_data.to(device)
-                target_data = target_data.to(device)
 
-                # Zero the gradients
-                optimizer.zero_grad()
+def plot_loss(loss_array):
+    plt.scatter(range(len(loss_array)), loss_array, c="red", s=1)
+    plt.title('Plot of the Loss function')
+    plt.xlabel('epochs')
+    plt.ylabel('Train Loss')
+    plt.show()
 
-                # Forward pass through the encoder
-                encoder_output = self.encoder(input_data)
 
-                 # Pass the text to be tokenizd to BERT
-                bert_output = self.bert(text_input)
+def train(data_path: str, model_args: dict, trainer_args: dict):
+    """Train a model.
 
-                # Pass the encoder output and input_data to cross-attention
-                # change cross attn input params
-                cross_attn_output = self.cross_attn(encoder_output, bert_output)
+    Args:
+        data_path: Path to data files
+        model_args: Dictionary of kwargs for model
+        trainer_args: Dictionary of kwargs for Trainer
 
-               
+    Returns:
+        Trained model instance.
+    """
+    # TODO: Create train and validation dataloaders via data_path: each dataloader must give batches of:
+    # TODO: [x_img, x_txt, y] samples, where x_img and y are input images resized to 512x512, and x_txt is
+    # TODO: corresponding report.
+    train_dl = ...
+    val_dl = ...
 
-                # Decode the output of x attn
-                decoded_output = self.decoder(cross_attn_output)
+    # Instantiate the model
+    model = FinalModel(**model_args)
 
-                # Calculate the MSE loss
-                loss = self.mse_loss(decoded_output, target_data)
+    # Instantiate the PyTorch Lightning Trainer
+    trainer = L.Trainer(**trainer_args)
 
-                loss_array.append(loss)
+    # Fit the model
+    # TODO: Checkpointing, callbacks, & distributed training support
+    trainer.fit(model=model, train_dataloaders=train_dl, val_dataloaders=val_dl)
 
-                # Backpropagation
-                loss.backward()
 
-                # Update the weights
-                self.optimizer.step()
+if __name__ == "__main__":
+    # Organize arguments here
+    train_args = cfg['TRAIN']
+    model_def = train_args['model_def']
+    model_instance_args = cfg['MODEL'][model_def]
+    trainer_args = train_args['TRAINER']
+    LR = train_args['LR']
 
-            if (i+1) % 100 == 0:
-                print(f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(train_loader)}], Loss: {loss.item()}')
+    data_path = cfg['DATA']['PATH']
+    model_args = {'model_def': model_def,
+                  'model_args': model_instance_args,
+                  'lr': LR}
 
-        # Plot the loss
-        self.plot_loss(loss_array)
-
-    def plot_loss(self, loss_array):
-        plt.scatter(range(len(loss_array)), loss_array, c="red", s=1)
-        plt.title('Plot of the Loss function')
-        plt.xlabel('epochs')
-        plt.ylabel('Train Loss')
-        plt.show()
+    # Train the model
+    train(data_path, model_args, trainer_args)

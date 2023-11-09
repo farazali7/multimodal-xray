@@ -3,6 +3,16 @@ CONFIGURATION SETTINGS FOR PROJECT
 '''
 
 cfg = {
+    'DATA': {
+        'PATH': 'data/'
+    },
+    'TRAIN': {
+        'model_def': 'ModelV1',
+        'trainer': {
+            'max_epochs': 30
+        },
+        'LR': 5e-4
+    },
     'MODEL': {
         'ModelV1': {
             'VIT': {

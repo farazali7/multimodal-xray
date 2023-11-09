@@ -1,11 +1,14 @@
-import torch.nn as nn
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 from src.models.transformer import ViTEncoder
 from src.models.image_encoders import get_biovil_image_encoder
 from src.models.text_encoders import get_cxr_bert_tokenizer_and_encoder, get_text_embeddings
 from src.models.decoder import Decoder
 from src.models.attention import SinusoidalPositionalEmbeddings, LearnablePositionalEmbeddings
+
+import lightning as L
 
 
 class ModelV1(nn.Module):
@@ -69,3 +72,37 @@ class ModelV1(nn.Module):
         out = self.decoder(s1=vit_embeddings, s2=report_embeddings)
 
         return out
+
+
+class FinalModel(L.LightningModule):
+    def __init__(self, model_def: str, model_args: dict, lr: float):
+        """Lightning Module wrapper around a model.
+
+        Args:
+            model_def: String specifying name of model class
+            model_args: kwargs to a model
+            lr: Learning rate for model
+        """
+        super(FinalModel, self).__init__()
+        self.model = eval(model_def)(model_args)
+        self.lr = lr
+
+    def training_step(self, batch, batch_idx):
+        x_img, x_txt, y = batch
+        out = self.model(x_img, x_txt)
+        loss = F.mse_loss(out, y)
+
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x_img, x_txt, y = batch
+        out = self.model(x_img, x_txt)
+        val_loss = F.mse_loss(out, y)
+
+        self.log("val_loss", val_loss)
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
+
+        return optimizer, lr_scheduler
