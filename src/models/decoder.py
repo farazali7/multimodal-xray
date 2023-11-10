@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 class Upsample(nn.Module):
     def __init__(self, inchn:int,outchn:int,mid=None):
@@ -19,6 +18,7 @@ class Upsample(nn.Module):
         self.outchn = outchn
         
         self.upsample = nn.Upsample(scale_factor=2,mode='bilinear')
+        
         self.conv = nn.Sequential(nn.Conv2d(self.inchn, self.outchn,kernel_size=3,stride=1,padding=1,bias=True),
                                   nn.BatchNorm2d(outchn),
                                   nn.ReLU(inplace=True))
@@ -27,7 +27,6 @@ class Upsample(nn.Module):
     def forward(self,x):
         x = self.upsample(x)
         x = self.conv(x)
-        
         return x
     
 class Decoder(nn.Module):
@@ -38,7 +37,7 @@ class Decoder(nn.Module):
         Args:
         outchn - The output channel size
         in_ft - Number of input features from the embedding
-        img_size = Input image size (hxw)
+        img_size = Desired output image size (hxw)
         apply_attention - Should cross attention be performed?
         s1 - Firt sequence 
         s2 - Second sequence of same length
@@ -60,8 +59,8 @@ class Decoder(nn.Module):
             self.features.append(in_ft)
             in_ft //= 2
         inchn = self.in_ft 
-       
-        for channels in reversed(self.features[1:]):
+
+        for channels in self.features[1:]:
             self.ups.append(Upsample(inchn,channels))
             inchn = channels
         self.UpLayers = nn.Sequential(*self.ups)
@@ -88,36 +87,39 @@ class Decoder(nn.Module):
         The forward method
         
         Args:
-        x - Input image
-        s1 - First sequence (image encodings)
+        x - Input image (if any)
+        s1 - Firt sequence (image encodings)
         s2 - Second sequence of same length (text embedding)
         
         """
         
         if self.attn:
             x = self.Attention(s1,s2)
-
-        # GAP
-        x = torch.mean(x, dim=1)
-
+        
         # Reshape to a square image
         sz = int(self.emb ** 0.5)
-        x = torch.reshape(x, (x.shape[0], sz, sz))
+        x = x.view(x.shape[0],x.shape[1],sz,sz)
 
-        # Add channel dim
-        x = x.unsqueeze(1)
+        #add upsampling
         x = self.UpLayers(x)
-        x = self.mp(x)
-        x = self.final(x)
         
+        #increasing image shape proportionate to output size
+        if x.shape[2] != self.imsize:
+            scale = self.imsize//x.shape[2]
+            extra = nn.Upsample(scale_factor=scale,mode='bilinear')
+            x = extra(x)
+            
+        x = self.final(x)
+
         return x
     
-'''
+"""
 #test
-s1 = torch.randn((1024,32,32))
-s2 = torch.randn((1024,32,32))
-decoder = Decoder(1,in_ft=1024,apply_attention=True,emb_dim=32,nheads=4)
+s1 = torch.randn((1,256,256))
+s2 = torch.randn((1,256,256))
+decoder = Decoder(1,in_ft=256,apply_attention=True,emb_dim=256,nheads=4,img_size=512)
 out = decoder(s1=s1,s2=s2)
 print(out.size())
-'''
+
+"""
 
