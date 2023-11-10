@@ -88,7 +88,7 @@ class Decoder(nn.Module):
         
         Args:
         x - Input image (if any)
-        s1 - Firt sequence (image encodings)
+        s1 - First sequence (image encodings)
         s2 - Second sequence of same length (text embedding)
         
         """
