@@ -55,7 +55,7 @@ class ViTEncoderLayer(nn.Module):
 
     def forward(self, x):
         x = self.layer_norm_1(x)
-        mha_out = self.mha(x)
+        mha_out = self.mha(x, x, x)
         x = mha_out + x  # Skip connection
 
         x = self.layer_norm_2(x)

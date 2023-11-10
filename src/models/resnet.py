@@ -1,11 +1,11 @@
 from pathlib import Path
 import torch
 from torchvision.models.resnet import ResNet, Bottleneck
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 
 class ResNet50Extractor(ResNet):
-    def __init__(self, pretrained_weights: Optional[str, Path] = None, **kwargs: Any) -> None:
+    def __init__(self, pretrained_weights: Optional[Union[str, Path]] = None, **kwargs: Any) -> None:
         """Wraps around PyTorch's ResNet50 model without final classification layer.
 
         Args:
@@ -18,7 +18,9 @@ class ResNet50Extractor(ResNet):
 
         if pretrained_weights is not None:
             state_dict = torch.load(pretrained_weights, map_location='cpu')
-            self.load_state_dict(state_dict)
+            # Ignore missing projector states for now
+            state_dict_new = {k.replace('encoder.encoder.', ''): v for k, v in state_dict.items() if 'projector' not in k}
+            self.load_state_dict(state_dict_new)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x0 = self.conv1(x)

@@ -238,3 +238,52 @@ class MultiHeadAttentionBlock(nn.Module):
         mha_out = self.mha(q, k, v)[0]  # Returns (output, weights)
 
         return mha_out
+
+
+class LearnablePositionalEmbeddings(nn.Module):
+    def __init__(self, embedding_dim: int, max_seq_len: int = 512):
+        """Standard learnable positional embeddings.
+
+        Args:
+            embedding_dim: Dimensionality of input tensor
+            max_seq_len: Maximum length of a single sequence
+        """
+        super(LearnablePositionalEmbeddings, self).__init__()
+
+        self.pos_emb = nn.Parameter(torch.randn(1, max_seq_len, embedding_dim))
+
+    def forward(self, x):
+        # x shape: [B, T, D]
+
+        return self.pos_emb[:, :x.shape[1], :]
+
+
+class SinusoidalPositionalEmbeddings(nn.Module):
+    def __init__(self, embedding_dim: int, max_seq_len: int = 512):
+        """Apply sinusoidal positional embeddings (alternates between sin and cos waves based on position).
+
+        Args:
+            embedding_dim: Dimensionality of input tensor
+            max_seq_len: Maximum length of a single sequence
+        """
+        super(SinusoidalPositionalEmbeddings, self).__init__()
+
+        # Denominator = 10,000^(2i/d) where i is index of embedding vector
+        # Must be divided by 2 because sin and cos each take up half along dimensionality of each sequence
+        # [embedding_dim/2, 1]
+        inv_freq = 1. / (10000 ** (2*(torch.arange(0, embedding_dim//2).float() / embedding_dim)))
+        # [max_seq_len, 1]
+        positions = torch.arange(0, max_seq_len, dtype=torch.float).unsqueeze(1)
+
+        positional_embeddings = torch.zeros(max_seq_len, embedding_dim)
+        positional_embeddings[:, 0::2] = torch.sin(positions*inv_freq)
+        positional_embeddings[:, 1::2] = torch.cos(positions*inv_freq)
+        self.positional_emb = nn.Parameter(positional_embeddings)
+
+    def forward(self, x):
+        batch_size, seq_len, _ = x.size()
+
+        # Slice and select positional embeddings according to the input sequence length
+        embeddings = self.positional_emb[None, :seq_len, :].to(x)
+
+        return embeddings
