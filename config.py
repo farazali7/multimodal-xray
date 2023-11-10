@@ -1,15 +1,26 @@
 '''
 CONFIGURATION SETTINGS FOR PROJECT
 '''
+import torch
 
 cfg = {
     'DATA': {
         'PATH': 'data/'
     },
+    'CALLBACK': {
+        'dirpath': 'results/',
+        'save_top_k':2,
+        'monitor':'val_loss'
+    },
     'TRAIN': {
         'model_def': 'ModelV1',
         'trainer': {
-            'max_epochs': 30
+            'max_epochs': 30,
+            'precision':'bf16',
+            'enable_checkpointing':True,
+            'accelerator':'gpu',
+            'devices':int(torch.cuda.device_count()),
+            'strategy':'ddp'
         },
         'LR': 5e-4
     },
