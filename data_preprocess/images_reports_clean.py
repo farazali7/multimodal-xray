@@ -27,7 +27,7 @@ def get_common_view(csv_file):
 dicom_id_array = get_common_view('../data/mimic-cxr-2.0.0-metadata.csv')
 
 # TODO: 
-image_directory = '../data/downloaded_jpgs'
+image_directory = '../data/downloaded_jpgs' 
 
 # List all jpg files in the directory
 jpg_files = glob.glob(os.path.join(image_directory, '*.jpg'))
@@ -42,6 +42,7 @@ for jpg_file in jpg_files:
 
 print("Cleanup complete.")
 
+# running this script will clean the jpgs of the view that are not common
 
     
 
