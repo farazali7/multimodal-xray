@@ -18,6 +18,50 @@ from torch.utils.data.distributed import DistributedSampler as DS
 from config import cfg
 from src.models.model import FinalModel
 
+from torch.utils.data import Dataset
+from PIL import Image
+import os
+import json
+
+from torch.utils.data import DataLoader
+from torchvision import transforms
+
+
+
+class UpdatedDatasetClass(Dataset):
+    def __init__(self, data_path, transform=None, is_train=True):
+        """
+        Another implementation of dataset class used for pytorch dataloader to handle the imgs and text
+
+        Args:
+            data_path: the path to the data directory with The JSON file corresponding to the data (../data_preprocess)
+            transform (callable, optional): functions for img pre-processing
+            is_train (bool): to differentiate between train and validation dataset.
+        """
+        self.data_path = data_path
+        self.transform = transform
+        self.is_train = is_train
+        # choose to open train or val image and reports
+        with open(os.path.join(data_path, 'train.json' if is_train else 'val.json')) as f:
+            self.data_index = json.load(f)
+
+    def __len__(self):
+        return len(self.data_index['images'])
+
+    def __getitem__(self, idx):
+        # load image
+        img_path = os.path.join(self.data_path, self.data_index['images'][idx])
+        image = Image.open(img_path).convert('RGB')
+        if self.transform:
+            image = self.transform(image)
+
+        # text data and label
+        text = self.data_index['texts'][idx]
+        label = self.data_index['labels'][idx]
+
+        return image, text, label
+
+
 def plot_loss(loss_array):
     plt.scatter(range(len(loss_array)), loss_array, c="red", s=1)
     plt.title('Plot of the Loss function')
@@ -26,7 +70,7 @@ def plot_loss(loss_array):
     plt.show()
 
 
-def train(data_path: str, model_args: dict, chkpt_args:dict, trainer_args: dict):
+def train(data_path: str, model_args: dict, chkpt_args:dict, trainer_args: dict, batch_size:int):
     """Train a model.
 
     Args:
@@ -37,11 +81,23 @@ def train(data_path: str, model_args: dict, chkpt_args:dict, trainer_args: dict)
     Returns:
         Trained model instance.
     """
-    # TODO: Create train and validation dataloaders via data_path: each dataloader must give batches of:
-    # TODO: [x_img, x_txt, y] samples, where x_img and y are input images resized to 512x512, and x_txt is
-    # TODO: corresponding report.
-    train_dl = ...
-    val_dl = ...
+    # Create train and validation dataloaders via data_path: each dataloader must give batches of:
+    # [x_img, x_txt, y] samples, where x_img and y are input images resized to 512x512, and x_txt is
+    # corresponding report.
+
+    # image preprocessing
+    transform = transforms.Compose([
+        transforms.Resize((512, 512)),
+        transforms.ToTensor(),
+    ])
+
+    train_dataset = UpdatedDatasetClass(data_path, transform=transform, is_train=True)
+    val_dataset = UpdatedDatasetClass(data_path, transform=transform, is_train=False)
+
+    # data loader  
+    train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_dl = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
     
     # Instantiate the model
     model = FinalModel(**model_args)
