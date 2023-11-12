@@ -14,13 +14,18 @@ mkdir -p "$output_dir"
 cd "$output_dir"
 
 # Run wget 
-wget -r -N -c -np --user "$username" --ask-password -A .jpg -I /files/mimic-cxr/2.0.0/files/p10/p10000032 "$base_url"
-
+# wget -r -N -c -np --user "$username" --ask-password -A .jpg -I /files/mimic-cxr/2.0.0/files/p10/p10000032 "$base_url"
+#wget -r -N -c -np --user "$username" --ask-password https://physionet.org/files/mimic-cxr-jpg/2.0.0/
+wget -r -N -c -np -A .txt --user "$username" --ask-password https://physionet.org/files/mimic-cxr/2.0.0/
 # Return to the original directory
 cd -
 
 # Running:
 # chmod +x get_reports.sh
 # ./get_reports.sh
+
+# if run on linux 
+#  sed -i 's/\r$//' get_reports.sh
+
 
 # EOS

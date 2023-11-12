@@ -4,7 +4,7 @@
 read -p "Enter your username: " username
 
 # Define the base URL
-base_url="https://physionet.org/files/mimic-cxr-jpg/2.0.0/files/p10/p10000032"
+# base_url="https://physionet.org/files/mimic-cxr-jpg/2.0.0/files/p10/p10000032"
 output_dir="../data/downloaded_jpgs"
 
 # Create the output directory if it doesn't exist
@@ -14,7 +14,10 @@ mkdir -p "$output_dir"
 cd "$output_dir"
 
 # Run wget 
-wget -r -N -c -np --user "$username" --ask-password -A .jpg -I /files/mimic-cxr-jpg/2.0.0/files/p10/p10000032 "$base_url"
+#wget -r -N -c -np --user "$username" --ask-password -A .jpg -I /files/mimic-cxr-jpg/2.0.0/files/p10/p10000032 "$base_url"
+
+#wget -r -N -c -np --user nourijel --ask-password -A .jpg -I /files/mimic-cxr-jpg/2.0.0/files/p10/p10000032 https://physionet.org/files/mimic-cxr-jpg/2.0.0/files/p10/p10000032
+wget -r -N -c -np --user "$username" --ask-password https://physionet.org/files/mimic-cxr-jpg/2.0.0/
 
 # Return to the original directory
 cd -
@@ -22,5 +25,8 @@ cd -
 # Running:
 # chmod +x get_jpgs.sh
 # ./get_jpgs.sh
+
+# if linux: 
+# sed -i 's/\r$//' get_jpgs.sh
 
 # EOS
