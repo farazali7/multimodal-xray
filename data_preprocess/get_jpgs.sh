@@ -17,7 +17,10 @@ cd "$output_dir"
 #wget -r -N -c -np --user "$username" --ask-password -A .jpg -I /files/mimic-cxr-jpg/2.0.0/files/p10/p10000032 "$base_url"
 
 #wget -r -N -c -np --user nourijel --ask-password -A .jpg -I /files/mimic-cxr-jpg/2.0.0/files/p10/p10000032 https://physionet.org/files/mimic-cxr-jpg/2.0.0/files/p10/p10000032
-wget -r -N -c -np --user "$username" --ask-password https://physionet.org/files/mimic-cxr-jpg/2.0.0/
+# all data get
+# wget -r -N -c -np --user "$username" --ask-password https://physionet.org/files/mimic-cxr-jpg/2.0.0/
+# subset data get
+wget -r -N -c -np --user "$username" --ask-password https://physionet.org/files/mimic-cxr-jpg/2.0.0/files/p10/p10000032/
 
 # Return to the original directory
 cd -
