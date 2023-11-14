@@ -80,3 +80,4 @@ with open('train.json', 'w') as file:
 
 with open('val.json', 'w') as file:
     json.dump(val_data, file, indent=4)
+
