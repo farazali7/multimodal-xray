@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchmetrics.image.fid import FrechetInceptionDistance as FID
+from torchmetrics.image import StructuralSimilarityIndexMeasure as SSIM
+
 
 from src.models.transformer import ViTEncoder
 from src.models.image_encoders import get_biovil_image_encoder
@@ -86,20 +89,33 @@ class FinalModel(L.LightningModule):
         super(FinalModel, self).__init__()
         self.model = eval(model_def)(model_args)
         self.lr = lr
+        self.ssim = SSIM()
+        self.fid = FID(feature=64)
 
     def training_step(self, batch, batch_idx):
         x_img, x_txt, y = batch
         out = self.model(x_img, x_txt)
         loss = F.mse_loss(out, y)
-
+        
+        self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
         x_img, x_txt, y = batch
+        fids = []
+        
         out = self.model(x_img, x_txt)
         val_loss = F.mse_loss(out, y)
+        
+        ssim = self.ssim(out,y)
+        
+        self.fid.update(y,real=True)
+        self.fid.update(out,real=False)
+        fids.append(self.fid.compute())
 
         self.log("val_loss", val_loss)
+        self.log("SSIM",ssim)
+        fig,ax = self.fid.plot(fids)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)

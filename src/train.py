@@ -12,6 +12,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from torch.utils.data import DataLoader
 from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.loggers import TensorBoardLogger
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler as DS
 
@@ -70,7 +71,7 @@ def plot_loss(loss_array):
     plt.show()
 
 
-def train(data_path: str, model_args: dict, chkpt_args:dict, trainer_args: dict, batch_size:int):
+def train(data_path: str, model_args: dict, log_args:dict, chkpt_args:dict, trainer_args: dict, batch_size:int):
     """Train a model.
 
     Args:
@@ -102,8 +103,9 @@ def train(data_path: str, model_args: dict, chkpt_args:dict, trainer_args: dict,
     # Instantiate the model
     model = FinalModel(**model_args)
     checkpoint = ModelCheckpoint(**chkpt_args)
+    logger = TensorBoardLogger(**log_args)
     # Instantiate the PyTorch Lightning Trainer
-    trainer = L.Trainer(**trainer_args,callback=checkpoint)
+    trainer = L.Trainer(**trainer_args,callbacks=checkpoint,logger=logger)
     
     # Fit the model
     trainer.fit(model=model, train_dataloaders=train_dl, val_dataloaders=val_dl)
@@ -121,7 +123,8 @@ if __name__ == "__main__":
     model_args = {'model_def': model_def,
                   'model_args': model_instance_args,
                   'lr': LR}
+    log_args = cfg['LOGGER']
 
     # Train the model
-    train(data_path, model_args, chkpt_args, trainer_args)
+    train(data_path, model_args, log_args, chkpt_args, trainer_args)
     

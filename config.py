@@ -12,15 +12,19 @@ cfg = {
         'save_top_k':2,
         'monitor':'val_loss'
     },
+    'LOGGER': {
+        'save_dir': 'results/',
+        'name':'imglogs'
+    },
     'TRAIN': {
         'model_def': 'ModelV1',
         'trainer': {
             'max_epochs': 30,
-            'precision':'bf16',
+            'precision':16,
             'enable_checkpointing':True,
             'accelerator':'gpu',
             'devices':int(torch.cuda.device_count()),
-            'strategy':'ddp'
+            'strategy':'ddp_find_unused_parameters'
         },
         'LR': 5e-4
     },
