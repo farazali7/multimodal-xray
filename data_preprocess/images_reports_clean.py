@@ -13,10 +13,10 @@ def get_common_view(csv_file):
         
     # Get the most common ViewPosition
     most_common_view = df['ViewPosition'].mode()[0]
-    print(most_common_view)
+    #print(most_common_view)
 
     filtered_df = df[df['ViewPosition'] == most_common_view]
-    print(len(filtered_df))
+    #print(len(filtered_df))
 
     # array of dicom IDs with the most common view
     dicom_id_array = filtered_df['dicom_id'].to_numpy()
@@ -25,7 +25,6 @@ def get_common_view(csv_file):
 
 
 # Clean up to only have most Common views: 
-
 dicom_id_array = get_common_view('../data/mimic-cxr-2.0.0-metadata.csv')
 #print('68b5c4b1-227d0485-9cc38c3f-7b84ab51-4b472714' in dicom_id_array) # should be true because this is not the most common view
 #image_directory = '../data/physionet.org/files/mimic-cxr-jpg/2.0.0/files/p10/p10000032/s50414267' 
@@ -45,8 +44,7 @@ dicom_id_array = get_common_view('../data/mimic-cxr-2.0.0-metadata.csv')
 # print(view_counts)
 
 
-
-image_directory = "../data/physionet.org/files/mimic-cxr-jpg/2.0.0/files/p10/p10000032/"
+image_directory = "../data/downloaded_jpgs/physionet.org/files/mimic-cxr-jpg/2.0.0/files/p10/p10000032/"
 for root, _, _ in os.walk(image_directory):
    # List all jpg files in the directory
    jpg_files = glob.glob(os.path.join(root, '*.jpg'))
