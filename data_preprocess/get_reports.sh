@@ -20,6 +20,7 @@ cd "$output_dir"
 #wget -r -N -c -np -A .txt --user "$username" --ask-password https://physionet.org/files/mimic-cxr/2.0.0/
 #Subset data get
 wget -r -N -c -np -A .txt --user "$username" --ask-password https://physionet.org/files/mimic-cxr/2.0.0/files/p10/p10000032/
+wget -r -N -c -np -A .txt --user "$username" --ask-password https://physionet.org/files/mimic-cxr/2.0.0/files/p10/p10000764/
 
 # Return to the original directory
 cd -
