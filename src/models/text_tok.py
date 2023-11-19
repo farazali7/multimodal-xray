@@ -1,52 +1,41 @@
-# code was edited, but ideas from:
-# https://github.com/spro/char-rnn.pytorch,
-# and Dr.Colin Rafel HW6 Deep Learning Assignment (Unviversity of Tornto, Fall2023)
-
-import unidecode
-import re
+from transformers import AutoTokenizer, AutoModel
+import torch
 
 
-def read_file(filename):
+def txt_encoder():
     """
-    Read the text file corresponding to radiology reports. 
-    Normalize the text. 
-
+    Bert model for text 
+    raw_inputs is the reports for one patients
     """
-    with open(filename, 'r', encoding='utf-8') as file:
-        text = file.read()
-    text = ' '.join(re.sub('[^A-Za-z ]+', '', text).lower().split())
-    return unidecode.unidecode(text)
+    checkpoint = "microsoft/BiomedVLP-CXR-BERT-general"
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint, trust_remote_code=True)
+    model = AutoModel.from_pretrained(checkpoint, trust_remote_code=True)
 
 
-def create_mappings(text):
-    """
-    Create the mappings.
-    """
-    idx_to_char = list(set(text))
-    # Maps character to token index
-    char_to_idx = dict([(char, i) for i, char in enumerate(idx_to_char)])
-    return char_to_idx
 
-def tokenize(text, char_to_idx):
-    """
-    Tokenize the dataset
+    
+    return model, tokenizer
+
+    
+def get_text_embeddings(raw_inputs) -> torch.Tensor:
+    """Retrieve text embeddings.
 
     """
-    return [char_to_idx[char] for char in text]
+    model, tok = txt_encoder()
 
-def process_and_tokenize(filename):
-    """
-    Process the file and tokenize it
-
-    """
-    text = read_file(filename)
-    char_to_idx = create_mappings(text)
-    corpus_indices = tokenize(text, char_to_idx)
-    return corpus_indices, char_to_idx
+    inputs = tok(raw_inputs, padding=True, truncation=True, return_tensors="pt")
+    outputs = model(**inputs)
 
 
+    return outputs
 
-# sample usage: MIMICXR data
-filename = '../data/s50578979.txt'
-corpus_indices, char_to_idx = process_and_tokenize(filename)
-print(corpus_indices) 
+
+if __name__ == "__main__":
+    raw_inputs = ["There is no pneumothorax or pleural effusion", "No pleural effusion or pneumothorax is seen", "The extent of the pleural effusion is constant."]
+
+    outputs = get_text_embeddings(raw_inputs)
+    print(outputs.last_hidden_state.shape)
+
+    # #torch.Size([3, 11, 768])
+
+

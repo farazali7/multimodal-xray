@@ -2,6 +2,7 @@ import os
 import json
 from sklearn.model_selection import train_test_split
 import glob
+import re
 
 def create_json(images_root, texts_root, output_file):
     data_index = {'images': [],'labels':[] ,'texts': [], 'patient_id': []}
@@ -32,6 +33,21 @@ def create_json(images_root, texts_root, output_file):
         data_index['texts'].append(patient_to_text.get(patient_id, []))  
     data_index['labels'] = data_index['images'].copy()
 
+    text_contents = []
+    for text_file_path in data_index['texts']:
+        text_contents.append([])
+        for text in text_file_path:
+            try:
+                with open(text, 'r') as text_file:
+                    text = text_file.read().split(":")[-1]
+                    text = ''.join(re.sub('[^A-Za-z ]+', '', text).lower().strip())
+                    text_contents[-1].append(text)
+            except FileNotFoundError:
+                print(f"File not found: {text}")
+
+    data_index['texts'] = text_contents
+
+
     with open(output_file, 'w') as file:
         json.dump(data_index, file, indent=4)
 
@@ -47,6 +63,10 @@ create_json(images_root, texts_root, output_file)
 
 with open('all_data3.json', 'r') as file:
     data = json.load(file)
+
+# make the text go into the list
+
+
 
 # split by the index of the patient-id (same as index for img and text)
 indices = list(range(len(data['patient_id'])))
