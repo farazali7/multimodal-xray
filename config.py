@@ -18,7 +18,7 @@ cfg = {
     },
     'TRAIN': {
         'model_def': 'ModelV1',
-        'trainer': {
+        'TRAINER': {
             'max_epochs': 30,
             'precision':16,
             'enable_checkpointing':True,

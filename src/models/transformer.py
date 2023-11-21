@@ -53,9 +53,12 @@ class ViTEncoderLayer(nn.Module):
         self.layer_norm_2 = nn.LayerNorm(embed_dim)
         self.ffn = FeedForwardNetwork(embed_dim, hidden_dim, dropout)
 
-    def forward(self, x):
+    def forward(self, x, context=None):
         x = self.layer_norm_1(x)
-        mha_out = self.mha(x, x, x)
+
+        # Determines if cross-attention or self-attention will be used
+        q = context if context else x
+        mha_out = self.mha(q, x, x)
         x = mha_out + x  # Skip connection
 
         x = self.layer_norm_2(x)
@@ -90,11 +93,11 @@ class ViTEncoder(nn.Module):
         )
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x):
+    def forward(self, x, context=None):
         # Expects input 'x' is already tokenized & embedded
         # x.shape == [B, T, H, W, C], where T is seq len
         x = self.dropout(x)
-        x = self.enc_layers(x)
+        x = self.enc_layers(x, context)
 
         return x
 

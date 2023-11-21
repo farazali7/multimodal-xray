@@ -77,6 +77,65 @@ class ModelV1(nn.Module):
         return out
 
 
+class ModelV2(nn.Module):
+    def __init__(self, vit_args: dict, projector_args: dict):
+        """Final model v2.0 - uses masked vision token modelling
+
+            Args:
+                vit_args: Dictionary of kwargs for ViT encoder
+                projector_args: Dictionary of kwargs for linear projector (matches dim of image & text embeddings)
+        """
+        super(ModelV2, self).__init__()
+
+        # Image encoder - VQGAN
+        self.image_encoder = ...
+
+        # Image positional embeddings
+        self.image_pos_emb = LearnablePositionalEmbeddings(embedding_dim=vit_args['embed_dim'])
+
+        # Text encoder
+        self.text_tokenizer, self.text_encoder = get_cxr_bert_tokenizer_and_encoder()
+
+        # Image embeddings projector
+        self.image_projector = nn.Linear(projector_args['img_embed_dim'], projector_args['out_dim'])
+        self.text_projector = nn.Linear(projector_args['txt_embed_dim'], projector_args['out_dim'])
+
+        # Unmasking transformer
+        self.transformer = ViTEncoder(**vit_args)
+
+    def forward(self, x_img, x_txt):
+        # Assume x_img is of shape [B, H, W] and x_txt is of shape [B, ?, ?]
+
+        # Encode image [B, H', W', Di]
+        image_embeddings = self.image_encoder(x_img)
+
+        # [B, T, Di]
+        image_embeddings = torch.permute(torch.flatten(image_embeddings, 2, 3), (0, 2, 1))
+
+        # Add positional embeddings to the image embeddings
+        pos_embeddings = self.image_pos_emb(image_embeddings)
+        image_embeddings = image_embeddings + pos_embeddings
+
+        # Get output from ViT encoder
+        # [B, T, Di]
+        vit_embeddings = self.vit_encoder(image_embeddings)
+
+        # Tokenize and encode report
+        # [B, T, Dt]
+        report_embeddings = get_text_embeddings(x_txt, self.text_tokenizer, self.text_encoder,
+                                                max_pad_len=vit_embeddings.shape[1])
+
+        # Project image and text sequences to same dimensionality
+        # Image & text embeddings shape [B, T, Dp]
+        vit_embeddings = self.image_projector(vit_embeddings)
+        report_embeddings = self.text_projector(report_embeddings)
+
+        # Decoder w/ cross-attention
+        out = self.decoder(s1=vit_embeddings, s2=report_embeddings)
+
+        return out
+
+
 class FinalModel(L.LightningModule):
     def __init__(self, model_def: str, model_args: dict, lr: float):
         """Lightning Module wrapper around a model.
