@@ -52,6 +52,12 @@ cfg = {
                 'emb_dim': 256,
                 'nheads': 4,
             }
+        },
+        'ModelV2': {
+            'VQGAN': {
+                'WEIGHTS_PATH': 'data/pretrained_weights/vqgan/last.ckpt',
+                'CFG_PATH': 'data/pretrained_weights/vqgan/2021-12-17T08-58-54-project.yaml'
+            }
         }
     }
 }

@@ -6,7 +6,7 @@ from torchmetrics.image import StructuralSimilarityIndexMeasure as SSIM
 
 
 from src.models.transformer import ViTEncoder
-from src.models.image_encoders import get_biovil_image_encoder
+from src.models.image_encoders import get_biovil_image_encoder, VQGanVAE
 from src.models.text_encoders import get_cxr_bert_tokenizer_and_encoder, get_text_embeddings
 from src.models.decoder import Decoder
 from src.models.attention import SinusoidalPositionalEmbeddings, LearnablePositionalEmbeddings
@@ -78,17 +78,18 @@ class ModelV1(nn.Module):
 
 
 class ModelV2(nn.Module):
-    def __init__(self, vit_args: dict, projector_args: dict):
+    def __init__(self, encoder_args: dict, vit_args: dict, projector_args: dict):
         """Final model v2.0 - uses masked vision token modelling
 
             Args:
+                encoder_args: Dictionary of kwargs for VQGAN encoder
                 vit_args: Dictionary of kwargs for ViT encoder
                 projector_args: Dictionary of kwargs for linear projector (matches dim of image & text embeddings)
         """
         super(ModelV2, self).__init__()
 
         # Image encoder - VQGAN
-        self.image_encoder = ...
+        self.image_encoder = VQGanVAE(**encoder_args)
 
         # Image positional embeddings
         self.image_pos_emb = LearnablePositionalEmbeddings(embedding_dim=vit_args['embed_dim'])
