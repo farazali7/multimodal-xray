@@ -130,9 +130,11 @@ class TransformerDecoderLayer(nn.Module):
                                                  n_features=n_features)
         self.ffn = FeedForwardNetwork(embed_dim, hidden_dim, dropout)
 
-    def forward(self, x, context=None):
+    def forward(self, input):
+        x, context = input
+
         # Self attention
-        mha_out = self.mha(x, x, x)
+        mha_out = self.mha(x)
         x = mha_out + x  # Skip connection
         x = self.layer_norm_1(x)
 
@@ -167,12 +169,14 @@ class TransformerDecoder(nn.Module):
         """
         super(TransformerDecoder, self).__init__()
 
-        self.dec_layers = nn.Sequential(
-            *[TransformerDecoderLayer(embed_dim, hidden_dim, n_heads, dropout,
-                                      attention_type, n_features) for _ in range(n_layers)]
-        )
+        self.dec_layers = nn.ModuleList([])
+
+        for _ in range(n_layers):
+            self.dec_layers.append(TransformerDecoderLayer(embed_dim, hidden_dim, n_heads, dropout,
+                                                           attention_type, n_features))
 
     def forward(self, x, context=None):
-        x = self.dec_layers(x, context)
+        for dec_layer in self.dec_layers:
+            x = dec_layer((x, context))
 
         return x

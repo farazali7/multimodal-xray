@@ -78,34 +78,36 @@ class ModelV1(nn.Module):
 
 
 class ModelV2(nn.Module):
-    def __init__(self, encoder_args: dict, decoder_args: dict, projector_args: dict):
+    def __init__(self, decoder_args: dict, projector_args: dict):
         """Final model v2.0 - uses masked vision token modelling
 
             Args:
-                encoder_args: Dictionary of kwargs for VQGAN encoder
                 decoder_args: Dictionary of kwargs for Transformer decoder
                 projector_args: Dictionary of kwargs for linear projector (matches dim of image & text embeddings)
         """
         super(ModelV2, self).__init__()
 
-        # Image tokenizer - VQGAN (used for decoding here, encoding done in DataLoader)
-        self.image_tokenizer = VQGanVAE(**encoder_args)
-
-        self.image_embedding = nn.Embedding(num_embeddings=encoder_args['num_tokens'],
+        self.image_embedding = nn.Embedding(num_embeddings=1024,
                                             embedding_dim=decoder_args['embed_dim'])
 
         # Image positional embeddings
-        self.image_pos_emb = LearnablePositionalEmbeddings(embedding_dim=decoder_args['embed_dim'])
+        self.image_pos_emb = LearnablePositionalEmbeddings(embedding_dim=decoder_args['embed_dim'],
+                                                           max_seq_len=1024)
 
         # Text embeddings projector (if dimensionality of text sequence is not same as transformer then project)
-        self.text_projector = nn.Linear(projector_args['txt_embed_dim'], projector_args['out_dim']) if \
+        self.text_projector = nn.Linear(projector_args['txt_embed_dim'], decoder_args['embed_dim']) if \
             projector_args['txt_embed_dim'] != decoder_args['embed_dim'] else nn.Identity()
 
         # Unmasking transformer
         self.transformer = TransformerDecoder(**decoder_args)
 
+        # Final MLP
+        self.final_dense = nn.Linear(in_features=decoder_args['embed_dim'], out_features=1024)
+
     def forward(self, x_img, x_txt):
         # Assume x_img is of shape [B, 1024] and x_txt is of shape [B, T, Dt]
+
+        # TODO: MASK IMAGE INDICES
 
         # Transform indices to image embeddings [B, 1024, Dmodel]
         image_embeddings = self.image_embedding(x_img)
@@ -122,9 +124,11 @@ class ModelV2(nn.Module):
         # report_embeddings shape - [B, T, Dmodel]
 
         # Decoder w/ cross-attention
-        out = self.decoder(x=report_embeddings, context=image_embeddings)
+        out = self.transformer(x=image_embeddings, context=report_embeddings)
 
-        return out
+        logits = self.final_dense(out)
+
+        return logits
 
 
 class FinalModel(L.LightningModule):
