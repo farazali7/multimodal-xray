@@ -5,7 +5,7 @@ from torchmetrics.image.fid import FrechetInceptionDistance as FID
 from torchmetrics.image import StructuralSimilarityIndexMeasure as SSIM
 
 
-from src.models.transformer import ViTEncoder
+from src.models.transformer import ViTEncoder, TransformerDecoder
 from src.models.image_encoders import get_biovil_image_encoder, VQGanVAE
 from src.models.text_encoders import get_cxr_bert_tokenizer_and_encoder, get_text_embeddings
 from src.models.decoder import Decoder
@@ -78,61 +78,51 @@ class ModelV1(nn.Module):
 
 
 class ModelV2(nn.Module):
-    def __init__(self, encoder_args: dict, vit_args: dict, projector_args: dict):
+    def __init__(self, encoder_args: dict, decoder_args: dict, projector_args: dict):
         """Final model v2.0 - uses masked vision token modelling
 
             Args:
                 encoder_args: Dictionary of kwargs for VQGAN encoder
-                vit_args: Dictionary of kwargs for ViT encoder
+                decoder_args: Dictionary of kwargs for Transformer decoder
                 projector_args: Dictionary of kwargs for linear projector (matches dim of image & text embeddings)
         """
         super(ModelV2, self).__init__()
 
-        # Image encoder - VQGAN
-        self.image_encoder = VQGanVAE(**encoder_args)
+        # Image tokenizer - VQGAN (used for decoding here, encoding done in DataLoader)
+        self.image_tokenizer = VQGanVAE(**encoder_args)
+
+        self.image_embedding = nn.Embedding(num_embeddings=encoder_args['num_tokens'],
+                                            embedding_dim=decoder_args['embed_dim'])
 
         # Image positional embeddings
-        self.image_pos_emb = LearnablePositionalEmbeddings(embedding_dim=vit_args['embed_dim'])
+        self.image_pos_emb = LearnablePositionalEmbeddings(embedding_dim=decoder_args['embed_dim'])
 
-        # Text encoder
-        self.text_tokenizer, self.text_encoder = get_cxr_bert_tokenizer_and_encoder()
-
-        # Image embeddings projector
-        self.image_projector = nn.Linear(projector_args['img_embed_dim'], projector_args['out_dim'])
-        self.text_projector = nn.Linear(projector_args['txt_embed_dim'], projector_args['out_dim'])
+        # Text embeddings projector (if dimensionality of text sequence is not same as transformer then project)
+        self.text_projector = nn.Linear(projector_args['txt_embed_dim'], projector_args['out_dim']) if \
+            projector_args['txt_embed_dim'] != decoder_args['embed_dim'] else nn.Identity()
 
         # Unmasking transformer
-        self.transformer = ViTEncoder(**vit_args)
+        self.transformer = TransformerDecoder(**decoder_args)
 
     def forward(self, x_img, x_txt):
-        # Assume x_img is of shape [B, H, W] and x_txt is of shape [B, ?, ?]
+        # Assume x_img is of shape [B, 1024] and x_txt is of shape [B, T, Dt]
 
-        # Encode image [B, H', W', Di]
-        image_embeddings = self.image_encoder(x_img)
-
-        # [B, T, Di]
-        image_embeddings = torch.permute(torch.flatten(image_embeddings, 2, 3), (0, 2, 1))
+        # Transform indices to image embeddings [B, 1024, Dmodel]
+        image_embeddings = self.image_embedding(x_img)
 
         # Add positional embeddings to the image embeddings
         pos_embeddings = self.image_pos_emb(image_embeddings)
         image_embeddings = image_embeddings + pos_embeddings
 
-        # Get output from ViT encoder
-        # [B, T, Di]
-        vit_embeddings = self.vit_encoder(image_embeddings)
+        # Project text sequences to same dimensionality as transformer
+        report_embeddings = self.text_projector(x_txt)
 
-        # Tokenize and encode report
-        # [B, T, Dt]
-        report_embeddings = get_text_embeddings(x_txt, self.text_tokenizer, self.text_encoder,
-                                                max_pad_len=vit_embeddings.shape[1])
-
-        # Project image and text sequences to same dimensionality
-        # Image & text embeddings shape [B, T, Dp]
-        vit_embeddings = self.image_projector(vit_embeddings)
-        report_embeddings = self.text_projector(report_embeddings)
+        # Shapes before the decoder:
+        # image_embeddings shape  - [B, 1024, Dmodel]
+        # report_embeddings shape - [B, T, Dmodel]
 
         # Decoder w/ cross-attention
-        out = self.decoder(s1=vit_embeddings, s2=report_embeddings)
+        out = self.decoder(x=report_embeddings, context=image_embeddings)
 
         return out
 
