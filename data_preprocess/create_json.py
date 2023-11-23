@@ -9,11 +9,19 @@ def create_json(images_root, texts_root, output_file):
     patient_to_image = {}
     patient_to_text = {}
 
+    study = []
     for root, _, files in os.walk(images_root):
         for file in files:
             if file.endswith('.jpg'):
                 path = os.path.join(root, file)
                 patient_id = path.split(os.sep)[-3]  
+                study_id = path.split(os.sep)[-2]
+                if study_id in study:
+                    break
+                else:
+                    study.append(study_id)
+
+                
                 if 'p' in patient_id and len(patient_id) > 3:  # Check if its valid ID for patient
                     patient_to_image.setdefault(patient_id, []).append(path)
                     
@@ -31,7 +39,9 @@ def create_json(images_root, texts_root, output_file):
         data_index['patient_id'].append(patient_id)
         data_index['images'].append(patient_to_image[patient_id])
         data_index['texts'].append(patient_to_text.get(patient_id, []))  
-    data_index['labels'] = data_index['images'].copy()
+    #data_index['labels'] = data_index['images'].copy()
+
+    # get the text from the files
 
     text_contents = []
     for text_file_path in data_index['texts']:
@@ -79,20 +89,47 @@ def get_items_by_indices(items_list, indices):
 train_data = {
     'images': get_items_by_indices(data['images'], train_indices),
     'texts': get_items_by_indices(data['texts'], train_indices),
-    'labels': get_items_by_indices(data['labels'], train_indices),
-    'patient_id': get_items_by_indices(data['patient_id'], train_indices)
+    'labels': []
 }
+
+imgs = []
+txts = []
+
+for patient_img in train_data["images"]:   
+    imgs.extend(patient_img)
+train_data["images"] = imgs
+
+train_data["labels"] = imgs
+
+for patient_txt in train_data["texts"]:
+    txts.extend(patient_txt)
+train_data["texts"] = txts
+
 
 val_data = {
     'images': get_items_by_indices(data['images'], val_indices),
     'texts': get_items_by_indices(data['texts'], val_indices),
-    'labels': get_items_by_indices(data['labels'], val_indices),
-    'patient_id': get_items_by_indices(data['patient_id'], val_indices)
+    'labels': []
 }
+
+imgs = []
+txts = []
+
+for patient_img in val_data["images"]:
+    imgs.extend(patient_img)
+val_data["images"] = imgs
+
+for patient_txt in val_data["texts"]:
+    txts.extend(patient_txt)
+val_data["texts"] = txts
+
+val_data["labels"] = imgs
+
 
 with open('train.json', 'w') as file:
     json.dump(train_data, file, indent=4)
 
 with open('val.json', 'w') as file:
     json.dump(val_data, file, indent=4)
+
 
