@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchmetrics.image.fid import FrechetInceptionDistance as FID
 from torchmetrics.image import StructuralSimilarityIndexMeasure as SSIM
-
+import math
+from einops import rearrange
 
 from src.models.transformer import ViTEncoder, TransformerDecoder
 from src.models.image_encoders import get_biovil_image_encoder, VQGanVAE
@@ -87,7 +88,7 @@ class ModelV2(nn.Module):
         """
         super(ModelV2, self).__init__()
 
-        self.image_embedding = nn.Embedding(num_embeddings=1024,
+        self.image_embedding = nn.Embedding(num_embeddings=1025,
                                             embedding_dim=decoder_args['embed_dim'])
 
         # Image positional embeddings
@@ -104,13 +105,29 @@ class ModelV2(nn.Module):
         # Final MLP
         self.final_dense = nn.Linear(in_features=decoder_args['embed_dim'], out_features=1024)
 
+    def _cosine_schedule(self, t):
+        return torch.cos(t * math.pi * 0.5)
+
     def forward(self, x_img, x_txt):
         # Assume x_img is of shape [B, 1024] and x_txt is of shape [B, T, Dt]
+        batch, seq_len = x_img.shape
 
-        # TODO: MASK IMAGE INDICES
+        # Prepare mask
+        rand_time = torch.zeros((batch,)).float().uniform_(0, 1)
+        rand_mask_probs = self._cosine_schedule(rand_time)
+        num_token_masked = (seq_len * rand_mask_probs).round().clamp(min=1)
+
+        batch_rand_perm = torch.rand((batch, seq_len)).argsort(dim=-1)
+        mask = batch_rand_perm < rearrange(num_token_masked, 'b -> b 1')
+
+        # Mask image by setting masked indices to idx 1024 (curr codebook size is 0-1023)
+        x = torch.where(mask, 1024, x_img)
+        # Modify GT label by setting all unmasked (original) tokens to -1 (to ignore in loss)
+        # shape [1024,]
+        labels = torch.where(mask, x_img, -1)
 
         # Transform indices to image embeddings [B, 1024, Dmodel]
-        image_embeddings = self.image_embedding(x_img)
+        image_embeddings = self.image_embedding(x)
 
         # Add positional embeddings to the image embeddings
         pos_embeddings = self.image_pos_emb(image_embeddings)
@@ -128,7 +145,9 @@ class ModelV2(nn.Module):
 
         logits = self.final_dense(out)
 
-        return logits
+        loss = F.cross_entropy(input=rearrange(logits, 'b n c -> b c n'), target=labels, ignore_index=-1)
+
+        return loss, logits
 
 
 class FinalModel(L.LightningModule):
