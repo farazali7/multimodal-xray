@@ -256,3 +256,38 @@ class FinalModelV1(L.LightningModule):
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
 
         return optimizer, lr_scheduler
+
+
+class FinalModelV2(L.LightningModule):
+    def __init__(self, model_args: dict, lr: float):
+        """Lightning Module wrapper around a model.
+
+        Args:
+            model_args: kwargs to a model
+            lr: Learning rate for model
+        """
+        super(FinalModelV2, self).__init__()
+        self.model = ModelV2(model_args)
+        self.lr = lr
+
+    def training_step(self, batch, batch_idx):
+        x_img, x_txt = batch
+        loss, logits = self.model(x_img, x_txt)
+
+        self.log("train_loss", loss)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x_img, x_txt = batch
+
+        loss, logits = self.model(x_img, x_txt)
+
+        self.log("val_loss", loss)
+        return loss
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+                                                                  patience=4)
+
+        return [optimizer], [{"scheduler": lr_scheduler, "interval": "epoch", "monitor": "val_loss"}]

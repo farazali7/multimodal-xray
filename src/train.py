@@ -17,7 +17,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler as DS
 
 from config import cfg
-from src.models.model import FinalModel
+from src.models.model import FinalModelV1, FinalModelV2
 
 from torch.utils.data import Dataset
 from PIL import Image
@@ -99,13 +99,12 @@ def train(data_path: str, model_args: dict, log_args:dict, chkpt_args:dict, trai
     train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_dl = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    
     # Instantiate the model
-    model = FinalModel(**model_args)
+    model = FinalModelV2(**model_args)
     checkpoint = ModelCheckpoint(**chkpt_args)
     logger = TensorBoardLogger(**log_args)
     # Instantiate the PyTorch Lightning Trainer
-    trainer = L.Trainer(**trainer_args,callbacks=checkpoint,logger=logger)
+    trainer = L.Trainer(**trainer_args, callbacks=checkpoint, logger=logger)
     
     # Fit the model
     trainer.fit(model=model, train_dataloaders=train_dl, val_dataloaders=val_dl)
