@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # get the username
-read -p "Enter your username: " username
+# read -p "Enter your username: " username
 
 # Define the base URL
 base_url="https://physionet.org/files/mimic-cxr/2.0.0/files/p10/p10000032"
@@ -24,15 +24,16 @@ cd "$output_dir"
 
 username=""
 
+
 password=""
 
 csv_file="../mimic-cxr-2.0.0-chexpert.csv"
-ids=$(tail -n +2 "$csv_file" | cut -d, -f1 | sort | uniq | head -n 3 | sed 's/^/p/' )
+ids=$(tail -n +2 "$csv_file" | cut -d, -f1 | sort | uniq | sed 's/^/p/' )
 
 for id in $ids; do
     #wget -r -N -c -np --user "$username" --ask-password https://physionet.org/files/mimic-cxr-jpg/2.0.0/files/p10/p10000032/
 
-    wget -r -N -c -np --user "$username" --password "$password" https://physionet.org/files/mimic-cxr/2.0.0/files/p10/${id}/
+    wget -r -N -c -np -A .txt --user "$username" --password "$password" https://physionet.org/files/mimic-cxr/2.0.0/files/p10/${id}/
 done
 
 
