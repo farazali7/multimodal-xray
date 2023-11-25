@@ -27,9 +27,9 @@ def get_text_embeddings(input: torch.Tensor, tokenizer: AutoTokenizer, model: Au
         Tensor of L2-normalized input text embeddings
     """
     tokenizer_output = tokenizer.batch_encode_plus(batch_text_or_text_pairs=input,
-                                                   add_special_tokens=True,
-                                                   padding='max_length',
+                                                   padding='longest',
                                                    max_length=max_pad_len,
+                                                   truncation=True,
                                                    return_tensors='pt')
     embeddings = model(input_ids=tokenizer_output.input_ids,
                        attention_mask=tokenizer_output.attention_mask,

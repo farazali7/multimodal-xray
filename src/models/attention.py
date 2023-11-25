@@ -234,8 +234,9 @@ class MultiHeadAttentionBlock(nn.Module):
         else:
             raise Exception(f'Attention type: {attention_type} not supported.')
 
-    def forward(self, q, k, v):
-        mha_out = self.mha(q, k, v)[0]  # Returns (output, weights)
+    def forward(self, x, context=None):
+        kv = context if context is not None else x
+        mha_out = self.mha(x, kv, kv)[0]  # Returns (output, weights)
 
         return mha_out
 

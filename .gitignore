@@ -3,6 +3,7 @@ data/
 !data/.gitkeep
 results/
 results/.gitkeep
+taming/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

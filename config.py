@@ -18,7 +18,7 @@ cfg = {
     },
     'TRAIN': {
         'model_def': 'ModelV1',
-        'trainer': {
+        'TRAINER': {
             'max_epochs': 30,
             'precision':16,
             'enable_checkpointing':True,
@@ -51,6 +51,25 @@ cfg = {
                 'apply_attention': True,
                 'emb_dim': 256,
                 'nheads': 4,
+            }
+        },
+        'ModelV2': {
+            'ENCODER': {
+                'WEIGHTS_PATH': 'data/pretrained_weights/vqgan/last.ckpt',
+                'CFG_PATH': 'data/pretrained_weights/vqgan/2021-12-17T08-58-54-project.yaml',
+                'CODEBOOK_PATH': 'data/pretrained_weights/vqgan/mimiccxr_vqgan1024_res512_codebook_indices.pickle'
+            },
+            'DECODER': {
+                'embed_dim': 512,
+                'hidden_dim': 2048,
+                'n_heads': 4,
+                'n_layers': 4,
+                'dropout': 0.3,
+                'attention_type': 'fast',
+                'n_features': 256
+            },
+            'PROJECTOR': {
+                'txt_embed_dim': 768,
             }
         }
     }
