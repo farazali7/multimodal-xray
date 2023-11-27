@@ -18,6 +18,7 @@ from torch.utils.data.distributed import DistributedSampler as DS
 
 from config import cfg
 from src.models.model import FinalModelV1, FinalModelV2
+from src.models.image_encoders import VQGanVAE
 
 from torch.utils.data import Dataset
 from PIL import Image
@@ -26,7 +27,6 @@ import json
 
 from torch.utils.data import DataLoader
 from torchvision import transforms
-
 
 
 class UpdatedDatasetClass(Dataset):
@@ -92,8 +92,13 @@ def train(data_path: str, model_args: dict, log_args:dict, chkpt_args:dict, trai
         transforms.ToTensor(),
     ])
 
-    train_dataset = UpdatedDatasetClass(data_path, transform=transform, is_train=True)
-    val_dataset = UpdatedDatasetClass(data_path, transform=transform, is_train=False)
+    encoder_args = model_args['ENCODER']
+    print(f'Loading VQGAN...')
+    vae = VQGanVAE(**encoder_args)
+    print(f'VQGAN loaded!')
+
+    train_dataset = UpdatedDatasetClass(data_path, vae=vae, transform=transform, is_train=True)
+    val_dataset = UpdatedDatasetClass(data_path, vae=vae, transform=transform, is_train=False)
 
     # data loader  
     train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -123,7 +128,8 @@ if __name__ == "__main__":
                   'model_args': model_instance_args,
                   'lr': LR}
     log_args = cfg['LOGGER']
+    batch_size = train_args['BATCH_SIZE']
 
     # Train the model
-    train(data_path, model_args, log_args, chkpt_args, trainer_args)
+    train(data_path, model_args, log_args, chkpt_args, trainer_args, batch_size=batch_size)
     

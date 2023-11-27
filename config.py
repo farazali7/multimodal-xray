@@ -26,7 +26,8 @@ cfg = {
             'devices':int(torch.cuda.device_count()),
             'strategy':'ddp_find_unused_parameters'
         },
-        'LR': 5e-4
+        'LR': 5e-4,
+        'BATCH_SIZE': 16
     },
     'MODEL': {
         'ModelV1': {
@@ -55,9 +56,9 @@ cfg = {
         },
         'ModelV2': {
             'ENCODER': {
-                'WEIGHTS_PATH': 'data/pretrained_weights/vqgan/last.ckpt',
-                'CFG_PATH': 'data/pretrained_weights/vqgan/2021-12-17T08-58-54-project.yaml',
-                'CODEBOOK_PATH': 'data/pretrained_weights/vqgan/mimiccxr_vqgan1024_res512_codebook_indices.pickle'
+                'model_path': 'data/pretrained_weights/vqgan/last.ckpt',
+                'cfg_path': 'data/pretrained_weights/vqgan/2021-12-17T08-58-54-project.yaml',
+                'codebook_path': 'data/pretrained_weights/vqgan/mimiccxr_vqgan1024_res512_codebook_indices.pickle'
             },
             'DECODER': {
                 'embed_dim': 512,
