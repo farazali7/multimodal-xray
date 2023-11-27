@@ -267,7 +267,7 @@ class FinalModelV2(L.LightningModule):
             lr: Learning rate for model
         """
         super(FinalModelV2, self).__init__()
-        self.model = ModelV2(model_args)
+        self.model = ModelV2(**model_args)
         self.lr = lr
 
     def training_step(self, batch, batch_idx):

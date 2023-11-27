@@ -30,16 +30,18 @@ from torchvision import transforms
 
 
 class UpdatedDatasetClass(Dataset):
-    def __init__(self, data_path, transform=None, is_train=True):
+    def __init__(self, data_path, vae, transform=None, is_train=True):
         """
         Another implementation of dataset class used for pytorch dataloader to handle the imgs and text
 
         Args:
             data_path: the path to the data directory with The JSON file corresponding to the data (../data_preprocess)
+            vae: VQGANVAE Model for image encoding (from dictionary)
             transform (callable, optional): functions for img pre-processing
             is_train (bool): to differentiate between train and validation dataset.
         """
         self.data_path = data_path
+        self.vae = vae
         self.transform = transform
         self.is_train = is_train
         # choose to open train or val image and reports
@@ -52,15 +54,13 @@ class UpdatedDatasetClass(Dataset):
     def __getitem__(self, idx):
         # load image
         img_path = os.path.join(self.data_path, self.data_index['images'][idx])
-        image = Image.open(img_path).convert('RGB')
-        if self.transform:
-            image = self.transform(image)
+        img_name = img_path.rsplit('/')[-1].split('.')[0]
+        image = self.vae.get_codebook_indices(img_name)
 
         # text data and label
         text = self.data_index['texts'][idx]
-        label = self.data_index['labels'][idx]
 
-        return image, text, label
+        return image, text
 
 
 def plot_loss(loss_array):
