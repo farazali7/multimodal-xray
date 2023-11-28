@@ -109,6 +109,8 @@ class ModelV2(nn.Module):
         self.final_dense = nn.Linear(in_features=decoder_args['embed_dim'], out_features=1024)
 
         self.tokenizer = tokenizer
+        for p in self.tokenizer.parameters():
+            p.requires_grad = False
 
     def _cosine_schedule(self, t):
         return torch.cos(t * math.pi * 0.5)
@@ -119,6 +121,7 @@ class ModelV2(nn.Module):
 
         x_txt_ids, x_txt_attn_mask = x_txt[..., 0], x_txt[..., 1]
         with torch.no_grad():
+            self.tokenizer.eval()
             x_txt = self.tokenizer(input_ids=x_txt_ids, attention_mask=x_txt_attn_mask,
                                    output_cls_projected_embedding=False, return_dict=False)[0]
             x_txt = F.normalize(x_txt, dim=1)
