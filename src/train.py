@@ -105,7 +105,7 @@ def train(data_path: str, text_tokens_path: str, model_args: dict, log_args:dict
         transforms.ToTensor(),
     ])
 
-    encoder_args = model_args['ENCODER']
+    encoder_args = model_args['model_args']['ENCODER']
     print(f'Loading VQGAN...')
     vae = VQGanVAE(**encoder_args)
     print(f'VQGAN loaded!')
