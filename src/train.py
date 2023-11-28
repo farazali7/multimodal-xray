@@ -71,6 +71,7 @@ class UpdatedDatasetClass(Dataset):
 
         img_name = self.names[idx]
         image = self.vae.get_codebook_indices(img_name)
+        image = image.squeeze()
         text = self.text_tokens[img_name]
 
         return image, text
