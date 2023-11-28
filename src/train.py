@@ -63,7 +63,7 @@ class UpdatedDatasetClass(Dataset):
         # load image
         img_path = os.path.join(self.data_path, self.data_index['images'][idx])
         img_name = img_path.rsplit('/')[-1].split('.')[0]
-        image = self.vae.get_codebook_indices(img_name)
+        image = self.vae.get_codebook_indices(img_name).squeeze()
 
         # text data and label
         text = self.data_index['texts'][idx]
