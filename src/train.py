@@ -151,8 +151,7 @@ if __name__ == "__main__":
     LR = train_args['LR']
     data_path = cfg['DATA']['PATH']
     text_tokens_path = cfg['DATA']['TEXT_TOKEN_PATH']
-    model_args = {'model_def': model_def,
-                  'model_args': model_instance_args,
+    model_args = {'model_args': model_instance_args,
                   'lr': LR}
     log_args = cfg['LOGGER']
     batch_size = train_args['BATCH_SIZE']
