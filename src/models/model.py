@@ -279,7 +279,7 @@ class FinalModelV2(L.LightningModule):
 
         e = self.current_epoch + 1
         if batch_idx == 15:
-            if e == 30:
+            if e == 29:
                 model_data = {'model': self.model.state_dict(),
                               'opt': self.optimizers().state_dict()}
 

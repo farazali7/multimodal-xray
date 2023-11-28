@@ -25,7 +25,7 @@ cfg = {
             'enable_checkpointing':True,
             'accelerator':'gpu',
             'devices':int(torch.cuda.device_count()),
-            'strategy':'auto'
+            'strategy':'ddp_find_unused_params_true'
         },
         'LR': 5e-4,
         'BATCH_SIZE': 16
@@ -67,7 +67,7 @@ cfg = {
                 'n_heads': 4,
                 'n_layers': 4,
                 'dropout': 0.3,
-                'attention_type': 'fast',
+                'attention_type': 'normal',
                 'n_features': 256
             },
             'PROJECTOR': {
