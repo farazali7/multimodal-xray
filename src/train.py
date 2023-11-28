@@ -5,6 +5,7 @@ TRAINING SCRIPT
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 import torch
 import lightning as L
@@ -30,13 +31,14 @@ from torchvision import transforms
 
 
 class UpdatedDatasetClass(Dataset):
-    def __init__(self, data_path, vae, transform=None, is_train=True):
+    def __init__(self, names, data_path, text_tokens_path, vae, transform=None, is_train=True):
         """
         Another implementation of dataset class used for pytorch dataloader to handle the imgs and text
 
         Args:
             data_path: the path to the data directory with The JSON file corresponding to the data (../data_preprocess)
             vae: VQGANVAE Model for image encoding (from dictionary)
+            text_tokens_path: Path to file containing all text reports tokenized
             transform (callable, optional): functions for img pre-processing
             is_train (bool): to differentiate between train and validation dataset.
         """
@@ -44,21 +46,31 @@ class UpdatedDatasetClass(Dataset):
         self.vae = vae
         self.transform = transform
         self.is_train = is_train
-        # choose to open train or val image and reports
-        with open(os.path.join(data_path, 'train.json' if is_train else 'val.json')) as f:
-            self.data_index = json.load(f)
+        # # choose to open train or val image and reports
+        # with open(os.path.join(data_path, 'train.json' if is_train else 'val.json')) as f:
+        #     self.data_index = json.load(f)
+        #
+        # with (open(text_tokens_path, "rb")) as txt_tokens:
+        #     self.text_tokens = pickle.load(txt_tokens)
+        self.names = names
+        self.text_tokens = text_tokens_path
 
     def __len__(self):
         return len(self.data_index['images'])
 
     def __getitem__(self, idx):
         # load image
-        img_path = os.path.join(self.data_path, self.data_index['images'][idx])
-        img_name = img_path.rsplit('/')[-1].split('.')[0]
-        image = self.vae.get_codebook_indices(img_name)
+        # img_path = os.path.join(self.data_path, self.data_index['images'][idx])
+        # img_name = img_path.rsplit('/')[-1].split('.')[0]
+        # image = self.vae.get_codebook_indices(img_name)
+        #
+        # # text data and label
+        # text = self.data_index['texts'][idx]
+        # text = self.text_tokens[img_name]
 
-        # text data and label
-        text = self.data_index['texts'][idx]
+        img_name = self.names[idx]
+        image = self.vae.get_codebook_indices(img_name)
+        text = self.text_tokens(img_name)
 
         return image, text
 
@@ -71,7 +83,8 @@ def plot_loss(loss_array):
     plt.show()
 
 
-def train(data_path: str, model_args: dict, log_args:dict, chkpt_args:dict, trainer_args: dict, batch_size:int):
+def train(data_path: str, text_tokens_path: str, model_args: dict, log_args:dict,
+          chkpt_args:dict, trainer_args: dict, batch_size:int):
     """Train a model.
 
     Args:
@@ -97,8 +110,20 @@ def train(data_path: str, model_args: dict, log_args:dict, chkpt_args:dict, trai
     vae = VQGanVAE(**encoder_args)
     print(f'VQGAN loaded!')
 
-    train_dataset = UpdatedDatasetClass(data_path, vae=vae, transform=transform, is_train=True)
-    val_dataset = UpdatedDatasetClass(data_path, vae=vae, transform=transform, is_train=False)
+    # TODO: REMOVE BELOW CODE
+    # Load the text tokenized file
+    with (open(text_tokens_path, "rb")) as txt_tokens:
+        text_tokens = pickle.load(txt_tokens)
+    print(f'Text tokens file loaded!')
+    all_keys = text_tokens.keys()
+    # train and test
+    train_keys = all_keys[:250]
+    val_keys = all_keys[250:]
+    text_tokens_path = text_tokens
+    # ----------------------
+
+    train_dataset = UpdatedDatasetClass(train_keys, data_path, text_tokens_path, vae=vae, transform=transform, is_train=True)
+    val_dataset = UpdatedDatasetClass(val_keys, data_path, text_tokens_path, vae=vae, transform=transform, is_train=False)
 
     # data loader  
     train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -124,6 +149,7 @@ if __name__ == "__main__":
     trainer_args = train_args['TRAINER']
     LR = train_args['LR']
     data_path = cfg['DATA']['PATH']
+    text_tokens_path = cfg['DATA']['TEXT_TOKEN_PATH']
     model_args = {'model_def': model_def,
                   'model_args': model_instance_args,
                   'lr': LR}
