@@ -82,7 +82,7 @@ class ModelV1(nn.Module):
 
 
 class ModelV2(nn.Module):
-    def __init__(self, decoder_args: dict, projector_args: dict):
+    def __init__(self, tokenizer, decoder_args: dict, projector_args: dict):
         """Final model v2.0 - uses masked vision token modelling
 
             Args:
@@ -108,12 +108,19 @@ class ModelV2(nn.Module):
         # Final MLP
         self.final_dense = nn.Linear(in_features=decoder_args['embed_dim'], out_features=1024)
 
+        self.tokenizer = tokenizer
+
     def _cosine_schedule(self, t):
         return torch.cos(t * math.pi * 0.5)
 
     def forward(self, x_img, x_txt):
         # Assume x_img is of shape [B, 1024] and x_txt is of shape [B, T, Dt]
         batch, seq_len = x_img.shape
+
+        x_txt_ids, x_txt_attn_mask = x_txt[..., 0], x_txt[..., 1]
+        x_txt = self.tokenizer(input_ids=x_txt_ids, attention_mask=x_txt_attn_mask,
+                               output_cls_projected_embedding=False, return_dict=False)[0]
+        x_txt = F.normalize(x_txt, dim=1)
 
         # Prepare mask
         rand_time = torch.zeros((batch,)).float().uniform_(0, 1)
@@ -268,7 +275,7 @@ class FinalModelV2(L.LightningModule):
             lr: Learning rate for model
         """
         super(FinalModelV2, self).__init__()
-        self.model = ModelV2(decoder_args=model_args['DECODER'], projector_args=model_args['PROJECTOR'])
+        self.model = ModelV2(tokenizer=model_args['tokenizer'], decoder_args=model_args['DECODER'], projector_args=model_args['PROJECTOR'])
         self.lr = lr
 
     def training_step(self, batch, batch_idx):

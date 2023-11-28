@@ -110,6 +110,7 @@ def train(data_path: str, text_tokens_path: str, model_args: dict, log_args:dict
 
     #TODO: REMOVE IF SLOW
     tokenizer, text_model = get_cxr_bert_tokenizer_and_encoder()
+    model_args['model_args']['tokenizer'] = text_model
 
     # ---------------
 
