@@ -18,7 +18,7 @@ cfg = {
         'name':'imglogs'
     },
     'TRAIN': {
-        'model_def': 'ModelV1',
+        'model_def': 'ModelV2',
         'TRAINER': {
             'max_epochs': 30,
             'precision':16,
