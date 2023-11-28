@@ -56,7 +56,8 @@ class UpdatedDatasetClass(Dataset):
         self.text_tokens = text_tokens_path
 
     def __len__(self):
-        return len(self.data_index['images'])
+        return len(self.names)
+        # return len(self.data_index['images'])
 
     def __getitem__(self, idx):
         # load image
