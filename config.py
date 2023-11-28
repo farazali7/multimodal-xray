@@ -28,7 +28,7 @@ cfg = {
             'strategy': 'ddp_find_unused_parameters_true'
         },
         'LR': 1e-3,
-        'BATCH_SIZE': 64
+        'BATCH_SIZE': 32
     },
     'MODEL': {
         'ModelV1': {
