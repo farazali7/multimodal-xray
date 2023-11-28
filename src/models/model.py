@@ -122,6 +122,7 @@ class ModelV2(nn.Module):
 
         batch_rand_perm = torch.rand((batch, seq_len)).argsort(dim=-1)
         mask = batch_rand_perm < rearrange(num_token_masked, 'b -> b 1')
+        mask = mask.to('cuda')
 
         # Mask image by setting masked indices to idx 1024 (curr codebook size is 0-1023)
         x = torch.where(mask, 1024, x_img)
