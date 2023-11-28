@@ -28,7 +28,7 @@ def get_text_embeddings(input: List[str], tokenizer: AutoTokenizer, model: AutoM
         Tensor of L2-normalized input text embeddings
     """
     tokenizer_output = tokenizer.batch_encode_plus(batch_text_or_text_pairs=input,
-                                                   padding='longest',
+                                                   padding='max_length',
                                                    max_length=max_pad_len,
                                                    truncation=True,
                                                    return_tensors='pt')
