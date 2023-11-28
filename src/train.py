@@ -105,11 +105,6 @@ def train(data_path: str, text_tokens_path: str, model_args: dict, log_args:dict
         transforms.ToTensor(),
     ])
 
-    encoder_args = model_args['model_args']['ENCODER']
-    print(f'Loading VQGAN...')
-    vae = VQGanVAE(**encoder_args)
-    print(f'VQGAN loaded!')
-
     # TODO: REMOVE BELOW CODE
     # Load the text tokenized file
     with (open(text_tokens_path, "rb")) as txt_tokens:
@@ -121,6 +116,11 @@ def train(data_path: str, text_tokens_path: str, model_args: dict, log_args:dict
     val_keys = all_keys[250:]
     text_tokens_path = text_tokens
     # ----------------------
+
+    encoder_args = model_args['model_args']['ENCODER']
+    print(f'Loading VQGAN...')
+    vae = VQGanVAE(**encoder_args)
+    print(f'VQGAN loaded!')
 
     train_dataset = UpdatedDatasetClass(train_keys, data_path, text_tokens_path, vae=vae, transform=transform, is_train=True)
     val_dataset = UpdatedDatasetClass(val_keys, data_path, text_tokens_path, vae=vae, transform=transform, is_train=False)
