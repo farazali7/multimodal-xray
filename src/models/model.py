@@ -139,7 +139,8 @@ class ModelV2(nn.Module):
         x = torch.where(mask, 1024, x_img)
         # Modify GT label by setting all unmasked (original) tokens to -1 (to ignore in loss)
         # shape [1024,]
-        labels = torch.where(mask, x_img, -1)
+        x_img_c = x_img.clone()
+        labels = torch.where(mask, x_img_c, -1)
 
         # Transform indices to image embeddings [B, 1024, Dmodel]
         image_embeddings = self.image_embedding(x)
