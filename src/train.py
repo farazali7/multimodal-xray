@@ -157,5 +157,5 @@ if __name__ == "__main__":
     batch_size = train_args['BATCH_SIZE']
 
     # Train the model
-    train(data_path, model_args, log_args, chkpt_args, trainer_args, batch_size=batch_size)
+    train(data_path, text_tokens_path, model_args, log_args, chkpt_args, trainer_args, batch_size=batch_size)
     
