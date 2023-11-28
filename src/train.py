@@ -110,7 +110,7 @@ def train(data_path: str, text_tokens_path: str, model_args: dict, log_args:dict
     with (open(text_tokens_path, "rb")) as txt_tokens:
         text_tokens = pickle.load(txt_tokens)
     print(f'Text tokens file loaded!')
-    all_keys = text_tokens.keys()
+    all_keys = list(text_tokens.keys())
     # train and test
     train_keys = all_keys[:250]
     val_keys = all_keys[250:]
