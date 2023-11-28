@@ -118,8 +118,8 @@ def train(data_path: str, text_tokens_path: str, model_args: dict, log_args:dict
     val_dataset = UpdatedDatasetClass(data_path, text_tokens_path, vae=vae, tokenizer=tokenizer, text_model=text_model, transform=transform, is_train=False)
 
     # data loader  
-    train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=4)
-    val_dl = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=4)
+    train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=2)
+    val_dl = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=2)
 
     # Instantiate the model
     model = FinalModelV2(**model_args)
