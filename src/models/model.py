@@ -118,9 +118,10 @@ class ModelV2(nn.Module):
         batch, seq_len = x_img.shape
 
         x_txt_ids, x_txt_attn_mask = x_txt[..., 0], x_txt[..., 1]
-        x_txt = self.tokenizer(input_ids=x_txt_ids, attention_mask=x_txt_attn_mask,
-                               output_cls_projected_embedding=False, return_dict=False)[0]
-        x_txt = F.normalize(x_txt, dim=1)
+        with torch.no_grad():
+            x_txt = self.tokenizer(input_ids=x_txt_ids, attention_mask=x_txt_attn_mask,
+                                   output_cls_projected_embedding=False, return_dict=False)[0]
+            x_txt = F.normalize(x_txt, dim=1)
 
         # Prepare mask
         rand_time = torch.zeros((batch,)).float().uniform_(0, 1)
