@@ -68,7 +68,7 @@ class UpdatedDatasetClass(Dataset):
         # text data and label
         text = self.data_index['texts'][idx]
         # text = self.text_tokens[img_name]
-        text = get_text_embeddings([text], self.tokenizer, self.text_model)
+        text = get_text_embeddings([text], self.tokenizer, self.text_model).squeeze()
 
         return image, text
 
