@@ -25,7 +25,7 @@ cfg = {
             'enable_checkpointing':True,
             'accelerator':'gpu',
             'devices':int(torch.cuda.device_count()),
-            'strategy':'ddp_find_unused_params_true'
+            'strategy':'ddp_find_unused_parameters_true'
         },
         'LR': 5e-4,
         'BATCH_SIZE': 16
