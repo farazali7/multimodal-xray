@@ -20,6 +20,7 @@ from torch.utils.data.distributed import DistributedSampler as DS
 from config import cfg
 from src.models.model import FinalModelV1, FinalModelV2
 from src.models.image_encoders import VQGanVAE
+from src.models.text_encoders import get_cxr_bert_tokenizer_and_encoder, get_text_embeddings
 
 from torch.utils.data import Dataset
 from PIL import Image
@@ -31,7 +32,7 @@ from torchvision import transforms
 
 
 class UpdatedDatasetClass(Dataset):
-    def __init__(self, names, data_path, text_tokens_path, vae, transform=None, is_train=True):
+    def __init__(self, data_path, text_tokens_path, vae, tokenizer, text_model, transform=None, is_train=True):
         """
         Another implementation of dataset class used for pytorch dataloader to handle the imgs and text
 
@@ -46,33 +47,28 @@ class UpdatedDatasetClass(Dataset):
         self.vae = vae
         self.transform = transform
         self.is_train = is_train
-        # # choose to open train or val image and reports
-        # with open(os.path.join(data_path, 'train.json' if is_train else 'val.json')) as f:
-        #     self.data_index = json.load(f)
-        #
+        # choose to open train or val image and reports
+        with open(os.path.join(data_path, 'train.json' if is_train else 'val.json')) as f:
+            self.data_index = json.load(f)
+
         # with (open(text_tokens_path, "rb")) as txt_tokens:
         #     self.text_tokens = pickle.load(txt_tokens)
-        self.names = names
-        self.text_tokens = text_tokens_path
+        self.tokenizer = tokenizer
+        self.text_model = text_model
 
     def __len__(self):
-        return len(self.names)
-        # return len(self.data_index['images'])
+        return len(self.data_index['images'])
 
     def __getitem__(self, idx):
         # load image
-        # img_path = os.path.join(self.data_path, self.data_index['images'][idx])
-        # img_name = img_path.rsplit('/')[-1].split('.')[0]
-        # image = self.vae.get_codebook_indices(img_name)
-        #
-        # # text data and label
-        # text = self.data_index['texts'][idx]
-        # text = self.text_tokens[img_name]
-
-        img_name = self.names[idx]
+        img_path = os.path.join(self.data_path, self.data_index['images'][idx])
+        img_name = img_path.rsplit('/')[-1].split('.')[0]
         image = self.vae.get_codebook_indices(img_name)
-        image = image.squeeze()
-        text = self.text_tokens[img_name]
+
+        # text data and label
+        text = self.data_index['texts'][idx]
+        # text = self.text_tokens[img_name]
+        text = get_text_embeddings([text], self.tokenizer, self.text_model)
 
         return image, text
 
@@ -107,25 +103,18 @@ def train(data_path: str, text_tokens_path: str, model_args: dict, log_args:dict
         transforms.ToTensor(),
     ])
 
-    # TODO: REMOVE BELOW CODE
-    # Load the text tokenized file
-    with (open(text_tokens_path, "rb")) as txt_tokens:
-        text_tokens = pickle.load(txt_tokens)
-    print(f'Text tokens file loaded!')
-    all_keys = list(text_tokens.keys())
-    # train and test
-    train_keys = all_keys[:250]
-    val_keys = all_keys[250:]
-    text_tokens_path = text_tokens
-    # ----------------------
-
     encoder_args = model_args['model_args']['ENCODER']
     print(f'Loading VQGAN...')
     vae = VQGanVAE(**encoder_args)
     print(f'VQGAN loaded!')
 
-    train_dataset = UpdatedDatasetClass(train_keys, data_path, text_tokens_path, vae=vae, transform=transform, is_train=True)
-    val_dataset = UpdatedDatasetClass(val_keys, data_path, text_tokens_path, vae=vae, transform=transform, is_train=False)
+    #TODO: REMOVE IF SLOW
+    tokenizer, text_model = get_cxr_bert_tokenizer_and_encoder()
+
+    # ---------------
+
+    train_dataset = UpdatedDatasetClass(data_path, text_tokens_path, vae=vae, tokenizer=tokenizer, text_model=text_model, transform=transform, is_train=True)
+    val_dataset = UpdatedDatasetClass(data_path, text_tokens_path, vae=vae, tokenizer=tokenizer, text_model=text_model, transform=transform, is_train=False)
 
     # data loader  
     train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
