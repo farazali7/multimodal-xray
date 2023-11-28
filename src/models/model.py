@@ -275,7 +275,18 @@ class FinalModelV2(L.LightningModule):
         x_img, x_txt = batch
         loss, logits = self.model(x_img, x_txt)
 
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, prog_bar=True)
+
+        e = self.current_epoch + 1
+        if batch_idx == 15:
+            if e == 30:
+                model_data = {'model': self.model.state_dict(),
+                              'opt': self.optimizers().state_dict()}
+
+                model_path = 'results/model1_'
+
+                torch.save(model_data, model_path + str(e) + '.pth')
+
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -283,7 +294,7 @@ class FinalModelV2(L.LightningModule):
 
         loss, logits = self.model(x_img, x_txt)
 
-        self.log("val_loss", loss)
+        self.log("val_loss", loss, prog_bar=True)
         return loss
 
     def configure_optimizers(self):
