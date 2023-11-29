@@ -60,11 +60,8 @@ class FeedForwardNetwork2(nn.Module):
     def forward(self, x):
         x = self.layer_norm_1(x)
         x = self.linear_1(x)
-        print(f'IN FFN x AFTER LINEAR 1: {x.shape}')
         x = self.activation(x)
-        print(f'IN FFN x AFTER ACT 1: {x.shape}')
         x = self.layer_norm_2(x)
-        print(f'IN FFN x AFTER LN 1: {x.shape}')
         x = self.linear_2(x)
 
         return x
