@@ -64,7 +64,7 @@ class UNet(nn.Module):
     def forward(self, x):
         enc_ftrs = self.encoder(x)
         out = self.decoder(enc_ftrs[::-1][0], enc_ftrs[::-1][1:])
-        out = nn.ConvTranspose2d(64, 32, 2, 2)(out)
+        out = nn.ConvTranspose2d(64, 32, 2, 2)(out.to(torch.float32))
         out = self.head(out)
         if self.retain_dim:
             out = F.interpolate(out, self.out_sz)
