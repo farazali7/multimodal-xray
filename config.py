@@ -67,7 +67,7 @@ cfg = {
                 'embed_dim': 1024,
                 'hidden_dim': 4096,
                 'n_heads': 8,
-                'n_layers': 12,
+                'n_layers': 6,
                 'dropout': 0.0,
                 'attention_type': 'normal',
                 'n_features': 256
