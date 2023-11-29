@@ -5,8 +5,10 @@ import torch
 
 cfg = {
     'DATA': {
-        'PATH': 'data/image_names.pkl',
-        'TEXT_TOKEN_PATH': 'data/embeded_dicom_fixed.pkl'
+        'TRAIN_PATH': 'data/image_names.pkl',
+        'TRAIN_TEXT_TOKEN_PATH': 'data/embeded_dicom_fixed.pkl',
+        'VAL_PATH': 'data/p10_image_names.pkl',
+        'VAL_TEXT_TOKEN_PATH': 'data/p10_embeded_dicom_fixed.pkl'
     },
     'CALLBACK': {
         'dirpath': 'results/',
