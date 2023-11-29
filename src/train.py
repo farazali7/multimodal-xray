@@ -48,24 +48,23 @@ class UpdatedDatasetClass(Dataset):
         self.transform = transform
         self.is_train = is_train
         # choose to open train or val image and reports
-        with open(os.path.join(data_path, 'train.json' if is_train else 'val.json')) as f:
-            self.data_index = json.load(f)
+        with open(data_path, "rb") as f:
+            self.data_index = pickle.load(f)
 
         with (open(text_tokens_path, "rb")) as txt_tokens:
             self.text_tokens = pickle.load(txt_tokens)
 
     def __len__(self):
-        return len(self.data_index['images'])
+        return len(self.data_index)
 
     def __getitem__(self, idx):
         # load image
-        img_path = os.path.join(self.data_path, self.data_index['images'][idx])
-        img_name = img_path.rsplit('/')[-1].split('.')[0]
+        img_name = self.data_index[idx]
         image = self.vae.get_codebook_indices(img_name).squeeze()
 
         # text data and label
         # [1, 256, 2]
-        text = self.text_tokens[img_name]
+        text = self.text_tokens[img_name].squeeze()
 
         return image, text
 
