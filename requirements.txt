@@ -8,3 +8,4 @@ einops==0.7.0
 lightning==2.1.1
 opencv-python==4.8.1.78
 omegaconf===2.3.0
+wandb==0.16.0

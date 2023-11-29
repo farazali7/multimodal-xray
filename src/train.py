@@ -30,6 +30,7 @@ import json
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
+from lightning.pytorch.loggers import WandbLogger
 
 class UpdatedDatasetClass(Dataset):
     def __init__(self, data_path, text_tokens_path, vae, transform=None, is_train=True):
@@ -109,6 +110,9 @@ def train(data_path: str, text_tokens_path: str, model_args: dict, log_args:dict
 
     # ---------------
 
+    # WANDB Logger
+    wandb_logger = WandbLogger(project="multimodal_xray")
+
     train_dataset = UpdatedDatasetClass(data_path, text_tokens_path, vae=vae, transform=transform, is_train=True)
     val_dataset = UpdatedDatasetClass(data_path, text_tokens_path, vae=vae, transform=transform, is_train=False)
 
@@ -119,12 +123,19 @@ def train(data_path: str, text_tokens_path: str, model_args: dict, log_args:dict
     # Instantiate the model
     model = FinalModelV2(**model_args)
     checkpoint = ModelCheckpoint(**chkpt_args)
-    logger = TensorBoardLogger(**log_args)
+
+    # log gradients and model topology
+    wandb_logger.watch(model)
+    logger = wandb_logger
+    # logger = TensorBoardLogger(**log_args)
+
     # Instantiate the PyTorch Lightning Trainer
     trainer = L.Trainer(**trainer_args, callbacks=checkpoint, logger=logger)
     
     # Fit the model
     trainer.fit(model=model, train_dataloaders=train_dl, val_dataloaders=val_dl)
+
+    wandb_logger.experiment.unwatch(model)
 
 
 if __name__ == "__main__":
