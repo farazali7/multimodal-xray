@@ -157,7 +157,8 @@ class ModelV2(nn.Module):
         # report_embeddings shape - [B, T, Dmodel]
 
         # Decoder w/ cross-attention
-        out = self.transformer(x=image_embeddings, context=report_embeddings)
+        # out = self.transformer(x=image_embeddings, context=report_embeddings)
+        out = self.transformer(x=image_embeddings, context=image_embeddings)
 
         logits = self.final_dense(out)
 
