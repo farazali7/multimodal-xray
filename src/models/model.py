@@ -109,7 +109,7 @@ class ModelV2(nn.Module):
         # Final MLP
         self.final_dense = nn.Linear(in_features=decoder_args['embed_dim'], out_features=1024)
 
-        self.unet = UNet(enc_chs=(1, 64, 128), dec_chs=(128, 64), num_class=1)
+        self.unet = UNet(enc_chs=(1, 64, 128), dec_chs=(128, 64, 32), num_class=1)
 
         self.tokenizer = tokenizer
         for p in self.tokenizer.parameters():
