@@ -6,7 +6,7 @@ import torch
 cfg = {
     'DATA': {
         'PATH': 'data/',
-        'TEXT_TOKEN_PATH': 'data/yasi3_tokenized_text.pkl'
+        'TEXT_TOKEN_PATH': 'data/text_tokens.pkl'
     },
     'CALLBACK': {
         'dirpath': 'results/',

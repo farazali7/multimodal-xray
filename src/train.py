@@ -32,7 +32,7 @@ from torchvision import transforms
 
 
 class UpdatedDatasetClass(Dataset):
-    def __init__(self, data_path, text_tokens_path, vae, tokenizer, text_model, transform=None, is_train=True):
+    def __init__(self, data_path, text_tokens_path, vae, transform=None, is_train=True):
         """
         Another implementation of dataset class used for pytorch dataloader to handle the imgs and text
 
@@ -51,10 +51,8 @@ class UpdatedDatasetClass(Dataset):
         with open(os.path.join(data_path, 'train.json' if is_train else 'val.json')) as f:
             self.data_index = json.load(f)
 
-        # with (open(text_tokens_path, "rb")) as txt_tokens:
-        #     self.text_tokens = pickle.load(txt_tokens)
-        self.tokenizer = tokenizer
-        self.text_model = text_model
+        with (open(text_tokens_path, "rb")) as txt_tokens:
+            self.text_tokens = pickle.load(txt_tokens)
 
     def __len__(self):
         return len(self.data_index['images'])
@@ -66,9 +64,8 @@ class UpdatedDatasetClass(Dataset):
         image = self.vae.get_codebook_indices(img_name).squeeze()
 
         # text data and label
-        text = self.data_index['texts'][idx]
-        # text = self.text_tokens[img_name]
-        text = get_text_embeddings([text], self.tokenizer, self.text_model).squeeze()
+        # [1, 256, 2]
+        text = self.text_tokens[img_name]
 
         return image, text
 
@@ -108,14 +105,13 @@ def train(data_path: str, text_tokens_path: str, model_args: dict, log_args:dict
     vae = VQGanVAE(**encoder_args)
     print(f'VQGAN loaded!')
 
-    #TODO: REMOVE IF SLOW
-    tokenizer, text_model = get_cxr_bert_tokenizer_and_encoder()
+    _, text_model = get_cxr_bert_tokenizer_and_encoder()
     model_args['model_args']['tokenizer'] = text_model
 
     # ---------------
 
-    train_dataset = UpdatedDatasetClass(data_path, text_tokens_path, vae=vae, tokenizer=tokenizer, text_model=text_model, transform=transform, is_train=True)
-    val_dataset = UpdatedDatasetClass(data_path, text_tokens_path, vae=vae, tokenizer=tokenizer, text_model=text_model, transform=transform, is_train=False)
+    train_dataset = UpdatedDatasetClass(data_path, text_tokens_path, vae=vae, transform=transform, is_train=True)
+    val_dataset = UpdatedDatasetClass(data_path, text_tokens_path, vae=vae, transform=transform, is_train=False)
 
     # data loader  
     train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=1)
