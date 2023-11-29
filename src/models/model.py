@@ -165,6 +165,7 @@ class ModelV2(nn.Module):
 
         x = x.view(-1, 32, 32)
         x = x.to(torch.float16)
+        print(x.shape)
         out = self.unet(x).squeeze()
         out = out.view(-1, 1024)
 
