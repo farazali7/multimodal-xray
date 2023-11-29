@@ -57,13 +57,14 @@ class UNet(nn.Module):
         super().__init__()
         self.encoder = Encoder(enc_chs)
         self.decoder = Decoder(dec_chs)
-        self.head = nn.Conv2d(dec_chs[-1], num_class, 1)
+        self.head = nn.Conv2d(32, num_class, 1)
         self.retain_dim = retain_dim
         self.out_size = out_sz
 
     def forward(self, x):
         enc_ftrs = self.encoder(x)
         out = self.decoder(enc_ftrs[::-1][0], enc_ftrs[::-1][1:])
+        out = nn.ConvTranspose2d(64, 32, 2, 2)(out)
         out = self.head(out)
         if self.retain_dim:
             out = F.interpolate(out, self.out_sz)
