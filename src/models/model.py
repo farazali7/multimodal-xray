@@ -164,10 +164,14 @@ class ModelV2(nn.Module):
         # out = self.transformer(x=image_embeddings, context=image_embeddings)
 
         x = x.view(-1, 32, 32)
+        x = x.to(torch.float16)
         out = self.unet(x).squeeze()
         out = out.view(-1, 1024)
 
         logits = self.final_dense(out)
+
+        print(f'logits type: {logits.dtype}')
+        print(f'labels type: {labels.dtype}')
 
         loss = F.cross_entropy(input=rearrange(logits, 'b n c -> b c n'), target=labels, ignore_index=-1)
 
