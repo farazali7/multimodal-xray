@@ -52,7 +52,7 @@ class FeedForwardNetwork2(nn.Module):
         """
         super(FeedForwardNetwork2, self).__init__()
         self.layer_norm_1 = nn.LayerNorm(embed_dim)
-        self.linear_1 = nn.Linear(embed_dim, hidden_dim, bias=False)
+        self.linear_1 = nn.Linear(embed_dim, hidden_dim * 2, bias=False)
         self.activation = GEGLU()
         self.layer_norm_2 = nn.LayerNorm(hidden_dim)
         self.linear_2 = nn.Linear(hidden_dim, embed_dim, bias=False)
