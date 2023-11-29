@@ -114,7 +114,7 @@ def train(train_paths: Tuple[str, str], val_paths: Tuple[str, str], model_args: 
     wandb_logger = WandbLogger(project="multimodal_xray")
 
     train_dataset = UpdatedDatasetClass(*train_paths, vae=vae, transform=transform)
-    val_dataset = UpdatedDatasetClass(*val_paths, text_tokens_path, vae=vae, transform=transform)
+    val_dataset = UpdatedDatasetClass(*val_paths, vae=vae, transform=transform)
 
     # data loader  
     train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=0)
