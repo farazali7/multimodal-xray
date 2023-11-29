@@ -55,7 +55,7 @@ class UpdatedDatasetClass(Dataset):
             self.text_tokens = pickle.load(txt_tokens)
 
     def __len__(self):
-        return len(self.data_index)
+        return len(self.data_index[:300])
 
     def __getitem__(self, idx):
         # load image
