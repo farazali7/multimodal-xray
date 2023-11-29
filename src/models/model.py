@@ -109,7 +109,7 @@ class ModelV2(nn.Module):
         # Final MLP
         self.final_dense = nn.Linear(in_features=decoder_args['embed_dim'], out_features=1024)
 
-        self.unet = UNet(enc_chs=(1, 64, 128), dec_chs=(128, 64), num_class=1)
+        # self.unet = UNet(enc_chs=(1, 64, 128), dec_chs=(128, 64), num_class=1)
 
         self.tokenizer = tokenizer
         for p in self.tokenizer.parameters():
@@ -122,12 +122,12 @@ class ModelV2(nn.Module):
         # Assume x_img is of shape [B, 1024] and x_txt is of shape [B, T, Dt]
         batch, seq_len = x_img.shape
 
-        # x_txt_ids, x_txt_attn_mask = x_txt[..., 0], x_txt[..., 1]
-        # with torch.no_grad():
-        #     self.tokenizer.eval()
-        #     x_txt = self.tokenizer(input_ids=x_txt_ids, attention_mask=x_txt_attn_mask,
-        #                            output_cls_projected_embedding=False, return_dict=False)[0]
-        #     x_txt = F.normalize(x_txt, dim=1)
+        x_txt_ids, x_txt_attn_mask = x_txt[..., 0], x_txt[..., 1]
+        with torch.no_grad():
+            self.tokenizer.eval()
+            x_txt = self.tokenizer(input_ids=x_txt_ids, attention_mask=x_txt_attn_mask,
+                                   output_cls_projected_embedding=False, return_dict=False)[0]
+            x_txt = F.normalize(x_txt, dim=1)
 
         # Prepare mask
         rand_time = torch.zeros((batch,)).float().uniform_(0, 1)
@@ -139,40 +139,31 @@ class ModelV2(nn.Module):
         mask = mask.to('cuda')
 
         # Mask image by setting masked indices to idx 1024 (curr codebook size is 0-1023)
-        x = torch.where(mask, 1024, x_img)
+        # x = torch.where(mask, 1024, x_img)
+        x = x_img
         # Modify GT label by setting all unmasked (original) tokens to -1 (to ignore in loss)
         # shape [1024,]
         x_img_c = x_img.clone()
         labels = torch.where(mask, x_img_c, -1)
 
-        # # Transform indices to image embeddings [B, 1024, Dmodel]
-        # image_embeddings = self.image_embedding(x)
-        #
-        # # Add positional embeddings to the image embeddings
-        # pos_embeddings = self.image_pos_emb(image_embeddings)
-        # image_embeddings = image_embeddings + pos_embeddings
-        #
-        # # Project text sequences to same dimensionality as transformer
-        # report_embeddings = self.text_projector(x_txt)
-        #
-        # # Shapes before the decoder:
-        # # image_embeddings shape  - [B, 1024, Dmodel]
-        # # report_embeddings shape - [B, T, Dmodel]
-        #
-        # # Decoder w/ cross-attention
-        # out = self.transformer(x=image_embeddings, context=report_embeddings)
-        # out = self.transformer(x=image_embeddings, context=image_embeddings)
+        # Transform indices to image embeddings [B, 1024, Dmodel]
+        image_embeddings = self.image_embedding(x)
 
-        x = x.view(-1, 32, 32)
-        x = x.to(torch.float16)
-        x = x.unsqueeze(1)
-        out = self.unet(x)
-        print(out.shape)
-        out = out.view(-1, 1024)
+        # Add positional embeddings to the image embeddings
+        pos_embeddings = self.image_pos_emb(image_embeddings)
+        image_embeddings = image_embeddings + pos_embeddings
+
+        # Project text sequences to same dimensionality as transformer
+        report_embeddings = self.text_projector(x_txt)
+
+        # Shapes before the decoder:
+        # image_embeddings shape  - [B, 1024, Dmodel]
+        # report_embeddings shape - [B, T, Dmodel]
+
+        # Decoder w/ cross-attention
+        out = self.transformer(x=image_embeddings, context=report_embeddings)
 
         logits = self.final_dense(out)
-
-        logits = logits.to(torch.int64)
 
         loss = F.cross_entropy(input=rearrange(logits, 'b n c -> b c n'), target=labels, ignore_index=-1)
 
