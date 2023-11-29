@@ -64,11 +64,11 @@ cfg = {
                 'codebook_path': 'data/pretrained_weights/vqgan/mimiccxr_vqgan1024_res512_codebook_indices.pickle'
             },
             'DECODER': {
-                'embed_dim': 512,
-                'hidden_dim': 2048,
-                'n_heads': 4,
-                'n_layers': 6,
-                'dropout': 0.1,
+                'embed_dim': 1024,
+                'hidden_dim': 4096,
+                'n_heads': 8,
+                'n_layers': 12,
+                'dropout': 0.0,
                 'attention_type': 'normal',
                 'n_features': 256
             },

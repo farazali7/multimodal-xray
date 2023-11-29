@@ -288,7 +288,7 @@ class FinalModelV2(L.LightningModule):
         x_img, x_txt = batch
         loss, logits = self.model(x_img, x_txt)
 
-        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
 
         e = self.current_epoch + 1
         if batch_idx == 15:
