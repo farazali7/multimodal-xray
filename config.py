@@ -6,7 +6,7 @@ import torch
 cfg = {
     'DATA': {
         'PATH': 'data/image_names.pkl',
-        'TEXT_TOKEN_PATH': 'data/text_tokens.pkl'
+        'TEXT_TOKEN_PATH': 'data/embeded_dicom_fixed.pkl'
     },
     'CALLBACK': {
         'dirpath': 'results/',
