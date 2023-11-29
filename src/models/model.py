@@ -166,13 +166,13 @@ class ModelV2(nn.Module):
         x = x.view(-1, 32, 32)
         x = x.to(torch.float16)
         x = x.unsqueeze(1)
-        out = self.unet(x).squeeze()
+        out = self.unet(x)
+        print(out.shape)
         out = out.view(-1, 1024)
 
         logits = self.final_dense(out)
 
-        print(f'logits type: {logits.dtype}')
-        print(f'labels type: {labels.dtype}')
+        logits = logits.to(torch.int64)
 
         loss = F.cross_entropy(input=rearrange(logits, 'b n c -> b c n'), target=labels, ignore_index=-1)
 
