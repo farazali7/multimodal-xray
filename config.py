@@ -29,7 +29,7 @@ cfg = {
             'devices': int(torch.cuda.device_count()),
             'strategy': 'ddp_find_unused_parameters_true'
         },
-        'LR': 1e-3,
+        'LR': 1e-5,
         'BATCH_SIZE': 16
     },
     'MODEL': {

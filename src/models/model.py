@@ -139,8 +139,8 @@ class ModelV2(nn.Module):
         mask = mask.to('cuda')
 
         # Mask image by setting masked indices to idx 1024 (curr codebook size is 0-1023)
-        # x = torch.where(mask, 1024, x_img)
-        x = x_img
+        x = torch.where(mask, 1024, x_img)
+
         # Modify GT label by setting all unmasked (original) tokens to -1 (to ignore in loss)
         # shape [1024,]
         x_img_c = x_img.clone()
