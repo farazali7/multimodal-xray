@@ -131,7 +131,7 @@ def train(train_paths: Tuple[str, str], val_paths: Tuple[str, str], model_args: 
     checkpoint = ModelCheckpoint(**chkpt_args)
 
     # log gradients and model topology
-    wandb_logger.watch(model)
+    # wandb_logger.watch(model)
     logger = wandb_logger
     # logger = TensorBoardLogger(**log_args)
 
