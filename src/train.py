@@ -33,6 +33,9 @@ from torchvision import transforms
 
 from lightning.pytorch.loggers import WandbLogger
 
+os.environ['WANDB_MODE'] = cfg['WANDB']['MODE']
+
+
 class UpdatedDatasetClass(Dataset):
     def __init__(self, data_path, text_tokens_path, vae, transform=None, perc=None):
         """
