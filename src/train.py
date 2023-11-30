@@ -34,7 +34,7 @@ from torchvision import transforms
 from lightning.pytorch.loggers import WandbLogger
 
 class UpdatedDatasetClass(Dataset):
-    def __init__(self, data_path, text_tokens_path, vae, transform=None):
+    def __init__(self, data_path, text_tokens_path, vae, transform=None, perc=None):
         """
         Another implementation of dataset class used for pytorch dataloader to handle the imgs and text
 
@@ -43,6 +43,7 @@ class UpdatedDatasetClass(Dataset):
             vae: VQGANVAE Model for image encoding (from dictionary)
             text_tokens_path: Path to file containing all text reports tokenized
             transform (callable, optional): functions for img pre-processing
+            perc: Float between 0.0 and 1.0 representing amount of data to take if specified
         """
         print(f'Loading Dataset class for {data_path}')
         self.data_path = data_path
@@ -55,8 +56,13 @@ class UpdatedDatasetClass(Dataset):
         with (open(text_tokens_path, "rb")) as txt_tokens:
             self.text_tokens = pickle.load(txt_tokens)
 
+        # Get subset of data is specified
+        if perc is not None:
+            n_keep = int(len(self.data_index) * perc)
+            self.data_index = self.data_index[:n_keep]
+
     def __len__(self):
-        return len(self.data_index[:300])
+        return len(self.data_index)
 
     def __getitem__(self, idx):
         # load image
@@ -79,7 +85,7 @@ def plot_loss(loss_array):
 
 
 def train(train_paths: Tuple[str, str], val_paths: Tuple[str, str], model_args: dict,
-          log_args:dict, chkpt_args:dict, trainer_args: dict, batch_size:int):
+          log_args:dict, chkpt_args:dict, trainer_args: dict, batch_size:int, data_perc: float):
     """Train a model.
 
     Args:
@@ -113,8 +119,8 @@ def train(train_paths: Tuple[str, str], val_paths: Tuple[str, str], model_args: 
     # WANDB Logger
     wandb_logger = WandbLogger(project="multimodal_xray")
 
-    train_dataset = UpdatedDatasetClass(*train_paths, vae=vae, transform=transform)
-    val_dataset = UpdatedDatasetClass(*val_paths, vae=vae, transform=transform)
+    train_dataset = UpdatedDatasetClass(*train_paths, vae=vae, transform=transform, perc=data_perc)
+    val_dataset = UpdatedDatasetClass(*val_paths, vae=vae, transform=transform, perc=data_perc)
 
     # data loader  
     train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=0)
@@ -146,6 +152,7 @@ if __name__ == "__main__":
     chkpt_args = cfg['CALLBACK']
     trainer_args = train_args['TRAINER']
     LR = train_args['LR']
+    data_perc = train_args['DATA_PERC']
     train_data_path = cfg['DATA']['TRAIN_PATH']
     train_text_tokens_path = cfg['DATA']['TRAIN_TEXT_TOKEN_PATH']
     val_data_path = cfg['DATA']['VAL_PATH']
@@ -157,5 +164,5 @@ if __name__ == "__main__":
 
     # Train the model
     train((train_data_path, train_text_tokens_path), (val_data_path, val_text_tokens_path),
-          model_args, log_args, chkpt_args, trainer_args, batch_size=batch_size)
+          model_args, log_args, chkpt_args, trainer_args, batch_size=batch_size, data_perc=data_perc)
     

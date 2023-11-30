@@ -30,7 +30,8 @@ cfg = {
             'strategy': 'ddp_find_unused_parameters_true'
         },
         'LR': 1e-5,
-        'BATCH_SIZE': 16
+        'BATCH_SIZE': 16,
+        'DATA_PERC': 0.7  # Float between 0 and 1 for how much of total train-val data to use
     },
     'MODEL': {
         'ModelV1': {
