@@ -123,7 +123,7 @@ def train(train_paths: Tuple[str, str], val_paths: Tuple[str, str], model_args: 
     val_dataset = UpdatedDatasetClass(*val_paths, vae=vae, transform=transform, perc=data_perc)
 
     # data loader  
-    train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=0)
+    train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=1)
     val_dl = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=0)
 
     # Instantiate the model
