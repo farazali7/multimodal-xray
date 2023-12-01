@@ -39,13 +39,13 @@ def get_biovil_image_encoder() -> ResNet50Extractor:
 # https://github.com/CompVis/taming-transformers/blob/master/taming/models/vqgan.py
 # SINCE THEY WERE UNAVAILABLE IN LATEST PIP INSTALL OF THAT GITHUB REPO
 class VQGanVAE(nn.Module):
-    def __init__(self, model_path: str, cfg_path: str, codebook_path: Optional[str] = None):
+    def __init__(self, model_path: str, cfg_path: str, codebook_path: Optional[str] = None, device: str = 'cpu'):
         super(VQGanVAE, self).__init__()
         config = OmegaConf.load(cfg_path)
 
         model = instantiate_from_cfg(config.model)
 
-        state = torch.load(model_path, map_location='cpu')['state_dict']
+        state = torch.load(model_path, map_location=device)['state_dict']
         model.load_state_dict(state, strict=False)
 
         print(f"Loaded VQGAN from {model_path} and {cfg_path}")

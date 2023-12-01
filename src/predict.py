@@ -45,7 +45,9 @@ if __name__ == "__main__":
 
     txt_tok, txt_enc = get_cxr_bert_tokenizer_and_encoder()
 
-    vae = VQGanVAE(**encoder_args)
+    vae = VQGanVAE(**encoder_args, device=device)
+
+    vae = vae.to(device)
 
     prompt = ['Pneumothorax']
 
@@ -55,6 +57,8 @@ if __name__ == "__main__":
     checkpoint = torch.load(ckpt_path, map_location=device)
     sd = {x.replace('model.', '') : v for x, v in checkpoint['state_dict'].items()}
     model.load_state_dict(sd)
+
+    model = model.to(device)
 
     print(f"GENERATING WITH CKPT PATH: {ckpt_path}...")
     # Create and save pictures
