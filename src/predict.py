@@ -28,7 +28,8 @@ def generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt: List[str] = Non
     Returns:
         The decoded CXR message
     """
-    prompt_emb = get_text_embeddings(prompt, txt_tok, txt_enc)
+    prompt_emb = get_text_embeddings(prompt, txt_tok, txt_enc, device=device)
+
     synthetic = model.generate(prompt_emb, vae, temperature=temperature,
                                timesteps=timesteps, topk_filter_thresh=topk_filter_thresh)
 
@@ -51,7 +52,7 @@ if __name__ == "__main__":
 
     prompt = ['Pneumothorax']
 
-    model = ModelV2(txt_enc, decoder_args, projector_args)
+    model = ModelV2(txt_enc, decoder_args, projector_args, device=device)
 
     ckpt_path = 'results/perc005_1eminus4_nomaskloss/epoch=21-step=836.ckpt'
     checkpoint = torch.load(ckpt_path, map_location=device)

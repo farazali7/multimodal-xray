@@ -29,9 +29,9 @@ cfg = {
             'devices': int(torch.cuda.device_count()),
             'strategy': 'ddp_find_unused_parameters_true'
         },
-        'LR': 1e-4,
+        'LR': 1e-5,
         'BATCH_SIZE': 16,
-        'DATA_PERC': 0.005  # Float between 0 and 1 for how much of total train-val data to use
+        'DATA_PERC': 0.5  # Float between 0 and 1 for how much of total train-val data to use
     },
     'MODEL': {
         'ModelV1': {

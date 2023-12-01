@@ -83,7 +83,7 @@ class ModelV1(nn.Module):
 
 
 class ModelV2(nn.Module):
-    def __init__(self, tokenizer, decoder_args: dict, projector_args: dict):
+    def __init__(self, tokenizer, decoder_args: dict, projector_args: dict, device: str = 'cpu'):
         """Final model v2.0 - uses masked vision token modelling
 
             Args:
@@ -110,6 +110,7 @@ class ModelV2(nn.Module):
         self.final_dense = nn.Linear(in_features=decoder_args['embed_dim'], out_features=1024)
 
         # self.unet = UNet(enc_chs=(1, 64, 128), dec_chs=(128, 64), num_class=1)
+        self.device = device
 
         self.tokenizer = tokenizer
         for p in self.tokenizer.parameters():
@@ -180,8 +181,8 @@ class ModelV2(nn.Module):
         batch_size = x_txt.shape[0]
         shape = (batch_size, seq_len)
 
-        ids = torch.full(shape, fill_value=1024, dtype=torch.long)
-        scores = torch.zeros(shape, dtype=torch.float32)
+        ids = torch.full(shape, fill_value=1024, dtype=torch.long).to(self.device)
+        scores = torch.zeros(shape, dtype=torch.float32).to(self.device)
 
         # [B, T, Dmodel]
         txt_embed = self.text_projector(x_txt)

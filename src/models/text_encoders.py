@@ -16,7 +16,7 @@ def get_cxr_bert_tokenizer_and_encoder():
 
 
 def get_text_embeddings(input: List[str], tokenizer: AutoTokenizer, model: AutoModel,
-                        max_pad_len: int = 256) -> torch.Tensor:
+                        max_pad_len: int = 256, device: str = 'cpu') -> torch.Tensor:
     """Wrapper around CXR-BERT's get_projected_embeddings() function to retrieve text embeddings.
 
     Args:
@@ -32,6 +32,8 @@ def get_text_embeddings(input: List[str], tokenizer: AutoTokenizer, model: AutoM
                                                    max_length=max_pad_len,
                                                    truncation=True,
                                                    return_tensors='pt')
+    tokenizer_output.input_ids = tokenizer_output.input_ids.to(device)
+    tokenizer_output.attention_mask = tokenizer_output.attention_mask.to(device)
     embeddings = model(input_ids=tokenizer_output.input_ids,
                        attention_mask=tokenizer_output.attention_mask,
                        output_cls_projected_embedding=False,
