@@ -32,10 +32,10 @@ def get_text_embeddings(input: List[str], tokenizer: AutoTokenizer, model: AutoM
                                                    max_length=max_pad_len,
                                                    truncation=True,
                                                    return_tensors='pt')
-    # embeddings = model(input_ids=tokenizer_output.input_ids,
-    #                    attention_mask=tokenizer_output.attention_mask,
-    #                    output_cls_projected_embedding=False,
-    #                    return_dict=False)[0]
-    # embeddings = F.normalize(embeddings, dim=1)
+    embeddings = model(input_ids=tokenizer_output.input_ids,
+                       attention_mask=tokenizer_output.attention_mask,
+                       output_cls_projected_embedding=False,
+                       return_dict=False)[0]
+    embeddings = F.normalize(embeddings, dim=1)
 
-    return torch.stack((tokenizer_output.input_ids, tokenizer_output.attention_mask), -1)
+    return embeddings
