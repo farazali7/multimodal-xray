@@ -166,7 +166,8 @@ class ModelV2(nn.Module):
 
         logits = self.final_dense(out)
 
-        loss = F.cross_entropy(input=rearrange(logits, 'b n c -> b c n'), target=labels, ignore_index=-1)
+        loss = F.cross_entropy(input=rearrange(logits, 'b n c -> b c n'), target=labels, ignore_index=-1,
+                               size_average=True)
 
         return loss, logits
 
@@ -317,6 +318,8 @@ class FinalModelV2(L.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                                  patience=4)
+                                                                  patience=4,
+                                                                  min_lr=1e-8,
+                                                                  factor=0.5)
 
         return [optimizer], [{"scheduler": lr_scheduler, "interval": "epoch", "monitor": "val_loss"}]

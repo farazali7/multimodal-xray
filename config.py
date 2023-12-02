@@ -11,7 +11,7 @@ cfg = {
         'VAL_TEXT_TOKEN_PATH': 'data/p10_embeded_dicom_fixed.pkl'
     },
     'CALLBACK': {
-        'dirpath': 'results/',
+        'dirpath': 'results/all_maskloss',
         'save_top_k': 2,
         'monitor': 'val_loss'
     },
@@ -31,7 +31,7 @@ cfg = {
         },
         'LR': 1e-5,
         'BATCH_SIZE': 16,
-        'DATA_PERC': 0.5  # Float between 0 and 1 for how much of total train-val data to use
+        'DATA_PERC': 1.0  # Float between 0 and 1 for how much of total train-val data to use
     },
     'MODEL': {
         'ModelV1': {
@@ -69,7 +69,7 @@ cfg = {
                 'hidden_dim': 4096,
                 'n_heads': 8,
                 'n_layers': 6,
-                'dropout': 0.0,
+                'dropout': 1.0,
                 'attention_type': 'normal',
                 'n_features': 256
             },
