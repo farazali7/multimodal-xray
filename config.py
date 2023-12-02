@@ -22,7 +22,7 @@ cfg = {
     'TRAIN': {
         'model_def': 'ModelV2',
         'TRAINER': {
-            'max_epochs': 30,
+            'max_epochs': 100,
             'precision': 16,
             'enable_checkpointing': True,
             'accelerator': 'gpu',
