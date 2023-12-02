@@ -69,7 +69,7 @@ cfg = {
                 'hidden_dim': 4096,
                 'n_heads': 8,
                 'n_layers': 6,
-                'dropout': 1.0,
+                'dropout': 0.1,
                 'attention_type': 'normal',
                 'n_features': 256
             },
