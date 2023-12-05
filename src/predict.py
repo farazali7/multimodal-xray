@@ -61,8 +61,8 @@ def experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt: List[str] =
 
     # Generate results array for each topk thresh of size (temps, steps, *img.size)
     # results in (6, 8, 3, 512, 512)
-    for topk_thresh in tqdm(topk_thresholds, total=topk_thresholds.size()):
-        res = torch.zeros(temperatures.size(), steps.size(), 3, 512, 512)
+    for topk_thresh in tqdm(topk_thresholds, total=len(topk_thresholds)):
+        res = torch.zeros(len(temperatures), len(steps), 3, 512, 512)
         for i, temperature in enumerate(temperatures):
             for j, step in enumerate(steps):
                 img = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt,
