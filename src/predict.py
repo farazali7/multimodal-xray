@@ -56,9 +56,9 @@ def experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt: List[str] =
     Returns:
         Saves a figure showing the different sets of results.
     """
-    temperatures = np.arange(0.2, 1.2, 0.2)
-    steps = np.arange(1, 8, 1)
-    topk_thresholds = np.arange(0.5, 0.9, 0.1)
+    temperatures = np.arange(0.2, 1.4, 0.2)
+    steps = np.arange(1, 9, 1)
+    topk_thresholds = np.arange(0.5, 1.0, 0.1)
 
     # Generate results array for each topk thresh of size (temps, steps, *img.size)
     # results in (6, 8, 3, 512, 512)
@@ -71,16 +71,24 @@ def experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt: List[str] =
                 res[i, j, ...] = img.squeeze()
 
         # Plot and save
-        fig, axes = plt.subplots(6, 8, figsize=(12, 12))  # Create a 6x8 subplot grid
-
+        fig, axes = plt.subplots(len(temperatures), len(steps), figsize=(12, 12))  # Create a 6x8 subplot grid
         for i in range(len(temperatures)):  # Iterate through the y-axis
             for j in range(len(steps)):  # Iterate through the x-axis
-                img = res[i, j].transpose(1, 2, 0)  # Extract the image data for the subplot
-
+                img = res[i, j].detach().numpy().transpose(1, 2, 0)  # Extract the image data for the subplot
                 axes[i, j].imshow(img, cmap='gray')  # Plot the image in the corresponding subplot
-        plt.title(f'TopK Threshold: {topk_thresh}')
+        plt.suptitle(f'TopK Threshold: {round(topk_thresh, 1)} \n Prompt: {prompt[0]}')
+        fig.supxlabel("Steps")
+        fig.supylabel("Temperature")
+
+        # Add outer x-axis labels
+        for j in range(len(steps)):
+            axes[-1, j].set_xlabel(f'{steps[j]}')  # Assuming indexing starts from 0
+        # Add outer y-axis labels
+        for i in range(len(temperatures)):
+            axes[i, 0].set_ylabel(f'{round(temperatures[i], 2)}')  # Assuming indexing starts from 0
+        plt.setp(axes, xticks=[], yticks=[])
         plt.tight_layout()  # Adjust subplot parameters for better layout
-        fig.savefig(f'results/images/{model_name}_topk{topk_thresh}.png')
+        fig.savefig(f'results/images/{model_name}_topk{round(topk_thresh, 1)}_{prompt[0]}.png')
         fig.clf()
         plt.close()
 
