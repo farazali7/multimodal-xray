@@ -8,6 +8,7 @@ import os
 import matplotlib.pyplot as plt
 from typing import List
 from tqdm import tqdm
+import numpy as np
 
 from config import cfg
 
@@ -55,9 +56,9 @@ def experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt: List[str] =
     Returns:
         Saves a figure showing the different sets of results.
     """
-    temperatures = torch.range(0.2, 1.2, 0.2, dtype=torch.float32)
-    steps = torch.range(1, 8, 1, dtype=torch.int)
-    topk_thresholds = torch.range(0.5, 0.9, 0.1, dtype=torch.float32)
+    temperatures = np.range(0.2, 1.2, 0.2)
+    steps = np.range(1, 8, 1)
+    topk_thresholds = np.range(0.5, 0.9, 0.1)
 
     # Generate results array for each topk thresh of size (temps, steps, *img.size)
     # results in (6, 8, 3, 512, 512)
