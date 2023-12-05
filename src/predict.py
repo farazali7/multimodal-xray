@@ -56,9 +56,9 @@ def experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt: List[str] =
     Returns:
         Saves a figure showing the different sets of results.
     """
-    temperatures = np.range(0.2, 1.2, 0.2)
-    steps = np.range(1, 8, 1)
-    topk_thresholds = np.range(0.5, 0.9, 0.1)
+    temperatures = np.arange(0.2, 1.2, 0.2)
+    steps = np.arange(1, 8, 1)
+    topk_thresholds = np.arange(0.5, 0.9, 0.1)
 
     # Generate results array for each topk thresh of size (temps, steps, *img.size)
     # results in (6, 8, 3, 512, 512)
@@ -73,14 +73,14 @@ def experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt: List[str] =
         # Plot and save
         fig, axes = plt.subplots(6, 8, figsize=(12, 12))  # Create a 6x8 subplot grid
 
-        for i in range(temperatures.size()):  # Iterate through the y-axis
-            for j in range(steps.size()):  # Iterate through the x-axis
+        for i in range(len(temperatures)):  # Iterate through the y-axis
+            for j in range(len(steps)):  # Iterate through the x-axis
                 img = res[i, j]  # Extract the image data for the subplot
 
                 axes[i, j].imshow(img)  # Plot the image in the corresponding subplot
-        plt.title(f'TopK Threshold: {topk_thresh.item()}')
+        plt.title(f'TopK Threshold: {topk_thresh}')
         plt.tight_layout()  # Adjust subplot parameters for better layout
-        fig.savefig(f'results/images/{model_name}_topk{topk_thresh.item()}.png')
+        fig.savefig(f'results/images/{model_name}_topk{topk_thresh}.png')
         fig.clf()
         plt.close()
 
