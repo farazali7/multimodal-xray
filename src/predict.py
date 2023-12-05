@@ -75,9 +75,9 @@ def experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt: List[str] =
 
         for i in range(len(temperatures)):  # Iterate through the y-axis
             for j in range(len(steps)):  # Iterate through the x-axis
-                img = res[i, j]  # Extract the image data for the subplot
+                img = res[i, j].transpose(1, 2, 0)  # Extract the image data for the subplot
 
-                axes[i, j].imshow(img)  # Plot the image in the corresponding subplot
+                axes[i, j].imshow(img, cmap='gray')  # Plot the image in the corresponding subplot
         plt.title(f'TopK Threshold: {topk_thresh}')
         plt.tight_layout()  # Adjust subplot parameters for better layout
         fig.savefig(f'results/images/{model_name}_topk{topk_thresh}.png')
