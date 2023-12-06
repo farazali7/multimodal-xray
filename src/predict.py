@@ -56,7 +56,7 @@ def experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt: List[str] =
     Returns:
         Saves a figure showing the different sets of results.
     """
-    temperatures = np.arange(1.0, 1.8, 0.1)
+    temperatures = np.arange(1.0, 2.1, 0.1)
     steps = np.arange(2, 5, 1)
     topk_thresholds = np.arange(0.5, 0.7, 0.05)
 
