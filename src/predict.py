@@ -56,9 +56,9 @@ def experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt: List[str] =
     Returns:
         Saves a figure showing the different sets of results.
     """
-    temperatures = np.arange(0.2, 1.4, 0.2)
-    steps = np.arange(1, 9, 1)
-    topk_thresholds = np.arange(0.5, 1.0, 0.1)
+    temperatures = np.arange(1.0, 1.8, 0.1)
+    steps = np.arange(2, 5, 1)
+    topk_thresholds = np.arange(0.5, 0.7, 0.05)
 
     # Generate results array for each topk thresh of size (temps, steps, *img.size)
     # results in (6, 8, 3, 512, 512)
@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     print(f"GENERATING WITH CKPT PATH: {ckpt_path}...")
     # Create and save pictures
-    experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt, 'all_maskloss')
+    experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt, 'all_maskloss_moredetail')
     # cxr1 = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt, 1.0, 18, 0.9, 'image1')
     # cxr2 = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt, 1.0, 10, 0.9, 'image2')
 
