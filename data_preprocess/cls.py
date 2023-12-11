@@ -12,7 +12,6 @@ import time
 from tqdm import tqdm
 from torch import tensor
 from torchmetrics.classification import MultilabelAUROC
-
 CKPT_PATH = 'model.pth.tar' # start from pretrained chkpt
 N_CLASSES = 10
 CLASS_NAMES = ["Atelectasis","Cardiomegaly","Consolidation","Edema","Fracture","Lung Lesion","Lung Opacity","Pleural Effusion","Pneumonia","Pneumothorax"]
@@ -101,7 +100,7 @@ def train(model, data_path, ckpt_path, device, resume=True):
 def evaluate(model, val_loader, device):
 
     
-    print(f'Training on device: {device}')
+    print(f'On device: {device}')
 
    
 
@@ -117,9 +116,9 @@ def evaluate(model, val_loader, device):
             predictions = torch.sigmoid(outputs)  # get probabilities
             auroc_metric.update(predictions, labels)
 
-    aurocs = auroc_metric.compute()
-
+    aurocs = auroc_metric.compute() 
     avg_auroc = torch.mean(aurocs)
+    print(f'Average AUROC: {avg_auroc.item()}')
 
     return avg_auroc
 
@@ -129,7 +128,7 @@ def evaluate(model, val_loader, device):
 
 def test(data_path, new_ckpt, device):
 
-    print(f'Training on device: {device}')
+    print(f'Testing on device: {device}')
 
 
     cudnn.benchmark = True
@@ -155,7 +154,7 @@ def test(data_path, new_ckpt, device):
     test_dataset = ChestXrayDataSet(data_path, transform=transform, is_train=1)
     # 3,494 image label pairs
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
-    test_auroc = evaluate(model, test_loader)
+    test_auroc = evaluate(model, test_loader, device)
     print(f'Average Test AUROC: {test_auroc}')
 
     
@@ -192,8 +191,8 @@ if __name__ == "__main__":
     model = DenseNet121(N_CLASSES)
     ckpt_path = CKPT_PATH
 
-    new_ckpt = "model.pth.tar_epoch_1_1702010569.pth.tar"
+    new_ckpt = "model.pth.tar_epoch_3_1702271233.pth.tar"
 
-    train(model, data_path, ckpt_path, device, resume=True)
+    #train(model, data_path, ckpt_path, device, resume=True)
 
-    #test(data_path, new_ckpt, device)
+    test(data_path, new_ckpt, device)
