@@ -10,6 +10,8 @@ from read_data import ChestXrayDataSet
 from sklearn.metrics import roc_auc_score
 import time
 from tqdm import tqdm
+from torch import tensor
+from torchmetrics.classification import MultilabelAUROC
 
 CKPT_PATH = 'model.pth.tar' # start from pretrained chkpt
 N_CLASSES = 10
@@ -20,9 +22,13 @@ BATCH_SIZE = 16
 TRAIN_VAL_JSON = '../data'
 
 
-def train(model, data_path, ckpt_path, resume=True):
+def train(model, data_path, ckpt_path, device, resume=True):
+
+    
+    print(f'Training on device: {device}')
+
     best_val_auroc = 0.0
-    model = model.cuda()
+    model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     criterion = nn.BCEWithLogitsLoss()
     transform = transforms.Compose([
@@ -35,15 +41,29 @@ def train(model, data_path, ckpt_path, resume=True):
         if os.path.isfile(ckpt_path):
             print(f"Loading checkpoint '{ckpt_path}'")
             checkpoint = torch.load(ckpt_path)
-            model.load_state_dict(torch.load(ckpt_path))
+
+            # update the checkpoint from chexnet to be able to handle different number of classes in the last classification layer
+            model_dict = model.state_dict()
+
+            pretrained_dict = {k: v for k, v in checkpoint.items() if 'classifier' not in k}
+            model_dict.update(pretrained_dict)
+            #print(model_dict)
+            model.load_state_dict(model_dict)
+            #print(model)
+
             print("Checkpoint loaded")
         else:
             print(f"No checkpoint found at '{ckpt_path}', starting training from scratch")
+
 
     train_dataset = ChestXrayDataSet(data_path, transform=transform, is_train=0)
     val_dataset = ChestXrayDataSet(data_path, transform=transform, is_train=2)
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+
+
+
+
     num_epochs = 10
 
     for epoch in range(num_epochs):
@@ -51,7 +71,7 @@ def train(model, data_path, ckpt_path, resume=True):
         # Wrap the training loader with tqdm for a progress bar
         train_loop = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}')
         for images, labels in train_loop:
-            images, labels = images.cuda(), labels.cuda()
+            images, labels = images.to(device), labels.to(device)
             optimizer.zero_grad()
             outputs = model(images)  # prediction
             loss = criterion(outputs, labels)
@@ -61,7 +81,7 @@ def train(model, data_path, ckpt_path, resume=True):
             train_loop.set_postfix(loss=loss.item())
 
 
-        val_auroc = evaluate(model, val_loader)
+        val_auroc = evaluate(model, val_loader, device)
         print(f'Epoch {epoch+1}/{num_epochs}, Average Validation AUROC: {val_auroc}')
         if val_auroc > best_val_auroc:
             best_val_auroc = val_auroc
@@ -78,42 +98,44 @@ def train(model, data_path, ckpt_path, resume=True):
             print(f"New checkpoint saved at {new_ckpt_path}")
 
 
-def evaluate(model, val_loader):
-    model.eval()  
-    all_preds = []
-    all_labels = []
+def evaluate(model, val_loader, device):
+
+    
+    print(f'Training on device: {device}')
+
+   
+
+    auroc_metric = MultilabelAUROC(num_labels=N_CLASSES)
+
 
     with torch.no_grad():
         for images, labels in val_loader:
-            images = images.cuda()
-            labels = labels.cuda()
+            images = images.to(device)
+            labels = labels.to(device)
+            labels = labels.int()
             outputs = model(images)
             predictions = torch.sigmoid(outputs)  # get probabilities
+            auroc_metric.update(predictions, labels)
 
-            all_preds.extend(predictions.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
+    aurocs = auroc_metric.compute()
 
-    # AUROC for each class
-    AUROCs = []
-    for i in range(N_CLASSES):
-        try:
-            score = roc_auc_score([label[i] for label in all_labels], [pred[i] for pred in all_preds])
-            AUROCs.append(score)
-        except ValueError:
-            continue
+    avg_auroc = torch.mean(aurocs)
 
-    # average AUROC
-    avg_auroc = np.mean(AUROCs)
     return avg_auroc
 
 
-def test(data_path, new_ckpt):
+
+
+
+def test(data_path, new_ckpt, device):
+
+    print(f'Training on device: {device}')
+
 
     cudnn.benchmark = True
 
     # initialize and load the model
-    model = DenseNet121(N_CLASSES).cuda()
-    #model = torch.nn.DataParallel(model).cuda()
+    model = DenseNet121(N_CLASSES).to(device)
 
     if os.path.isfile(new_ckpt):
         print("=> loading checkpoint")
@@ -137,27 +159,6 @@ def test(data_path, new_ckpt):
     print(f'Average Test AUROC: {test_auroc}')
 
     
-
-def compute_AUCs(gt, pred):
-    """Computes Area Under the Curve (AUC) from prediction scores.
-
-    Args:
-        gt: Pytorch tensor on GPU, shape = [n_samples, n_classes]
-          true binary labels.
-        pred: Pytorch tensor on GPU, shape = [n_samples, n_classes]
-          can either be probability estimates of the positive class,
-          confidence values, or binary decisions.
-
-    Returns:
-        List of AUROCs of all classes.
-    """
-    AUROCs = []
-    gt_np = gt.cpu().numpy()
-    pred_np = pred.cpu().numpy()
-    for i in range(N_CLASSES):
-        AUROCs.append(roc_auc_score(gt_np[:, i], pred_np[:, i]))
-    return AUROCs
-
 
 class DenseNet121(nn.Module):
     """
@@ -185,12 +186,14 @@ class DenseNet121(nn.Module):
 if __name__ == "__main__":
 
     data_path = "../data"
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
 
     model = DenseNet121(N_CLASSES)
     ckpt_path = CKPT_PATH
 
     new_ckpt = "model.pth.tar_epoch_1_1702010569.pth.tar"
 
-    #train(model, data_path, ckpt_path)
+    train(model, data_path, ckpt_path, device, resume=True)
 
-    test(data_path, new_ckpt)
+    #test(data_path, new_ckpt, device)
