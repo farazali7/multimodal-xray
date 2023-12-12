@@ -232,10 +232,11 @@ def generate_p10_test_set(model, vae, txt_tok, txt_enc):
         os.makedirs(dir_path)
 
     for i, image_name in tqdm(enumerate(image_names), total=len(image_names)):
+        filename = image_name.split('/')[-1].split('.')[0]
         prompt = [prompts[i]]
         synthetic = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt,
                                            temperature, steps, topk_threshold, save=False)
-        save_image(synthetic[0], os.path.join(dir_path, image_name) + ".png")
+        save_image(synthetic[0], os.path.join(dir_path, filename) + ".png")
 
 
 class DenseNet121(nn.Module):
