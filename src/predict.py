@@ -123,7 +123,7 @@ def generate_batch(model, vae, txt_tok, txt_enc, class_proportions: Dict):
     data_info = {'images': [],
                  'class': []}
     for cls_name, cls_amount in class_proportions.items():
-        print(f'Generating class: {cls_name}')
+        print(f'GENERATING {cls_amount} SAMPLES FOR CLASS: {cls_name}')
         prompt = [cls_name]
         for i in tqdm(range(cls_amount), total=cls_amount):
             synthetic = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt,
