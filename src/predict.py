@@ -287,6 +287,7 @@ def compute_fid():
     checkpoint = torch.load("results/model.pth.tar_epoch_3_1702271233.pth.tar")
     model.load_state_dict(checkpoint["model_state_dict"])
     print("=> loaded checkpoint")
+    model = model.to(device)
     model.eval()
 
     # Step through data samples
