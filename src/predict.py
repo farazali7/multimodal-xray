@@ -4,6 +4,7 @@ import uuid
 from src.models.text_encoders import get_text_embeddings, get_cxr_bert_tokenizer_and_encoder
 from src.models.model import ModelV2
 from src.models.image_encoders import VQGanVAE
+from src.utils.metrics import calculate_fid
 
 import torch
 import torch.nn as nn
@@ -296,9 +297,15 @@ def compute_fid():
             all_orig_latents.append(orig_latents)
             all_syn_latents.append(syn_latents)
 
+    # Shapes: [N, 1024]
+    orig_latents_vec = torch.concatenate(all_orig_latents, dim=0).cpu().numpy()
+    syn_latents_vec = torch.concatenate(all_syn_latents, dim=0).cpu().numpy()
 
+    print(f'Got all latents, computing FID between distributions...')
+    # Compute FID scores between two distributions
+    fid = calculate_fid(orig_latents_vec, syn_latents_vec)
 
-
+    print(f'FID SCORE: {fid}')
 
 
 if __name__ == "__main__":
