@@ -60,12 +60,12 @@ class FIDDataset(Dataset):
         orig_image = cv2.imread(orig_path, 0)
         orig_image = cv2.resize(orig_image, [512, 512])
         orig_image = torch.Tensor(orig_image)[None, ...].expand(3, -1, -1)
-        orig_image /= 255.
+        orig_image = orig_image/255.
 
         syn_image = cv2.imread(syn_path, 0)
         syn_image = cv2.resize(syn_image, [512, 512])
         syn_image = torch.Tensor(syn_image)[None, ...].expand(3, -1, -1)
-        syn_image /= 255.
+        syn_image = syn_image/255.
 
         return orig_image, syn_image
 
