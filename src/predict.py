@@ -37,7 +37,9 @@ class FIDDataset(Dataset):
             transform (callable, optional): functions for img pre-processing
         """
         print(f'Loading Dataset class for FID')
-        self.transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(), xrv.datasets.XRayResizer(224)])
+        self.transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(),
+                                                         xrv.datasets.XRayResizer(224,
+                                                                                  engine='cv2')])
 
         self.syn_data_path = syn_data_path
         # choose to open train or val image and reports
