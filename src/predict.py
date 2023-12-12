@@ -386,7 +386,7 @@ def compute_mssim(txt_tok):
         res = res.append(new_row, ignore_index=True)
 
     res.to_csv('results/mssim_results.csv', index=False)
-    
+
     return res
 
 
@@ -437,6 +437,7 @@ if __name__ == "__main__":
 
     # generate_p10_test_set(model, vae, txt_tok, txt_enc)
 
-    compute_fid(txt_tok)
+    # compute_fid()
+    compute_mssim(txt_tok)
 
     print('Done')
