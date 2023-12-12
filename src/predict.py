@@ -160,7 +160,7 @@ def generate_batch(model, vae, txt_tok, txt_enc, class_proportions: Dict):
 def generate_class_proportions(total, props, class_list):
     res = {}
     for cls, prop in zip(class_list, props):
-        n = int(total * (1.0 - prop))
+        n = int(total * prop)
         res[cls] = n
 
     return res
@@ -200,14 +200,19 @@ if __name__ == "__main__":
     half = 2342
 
     # Given proportions for a multi-label problem
+    class_list = ["Atelectasis", "Cardiomegaly", "Consolidation", "Edema", "Fracture", "Lung Lesion", "Lung Opacity",
+                  "Pleural Effusion", "Pneumonia", "Pneumothorax"]
     proportions_multi_label = [1307, 1312, 226, 855, 217, 260, 1148, 1537, 629, 326]
+    # Sort them together
+    idxs = np.argsort(proportions_multi_label)
+    class_list = class_list[idxs]
+    proportions_multi_label = proportions_multi_label[idxs]
 
     # Convert to proportions for a multi-class problem
     proportions_sum = np.sum(proportions_multi_label)
     proportions_multi_class = [prop / proportions_sum for prop in proportions_multi_label]
+    proportions_multi_class.reverse()  # Least frequency class gets highest proportion now
 
-    class_list = ["Atelectasis", "Cardiomegaly", "Consolidation", "Edema", "Fracture", "Lung Lesion", "Lung Opacity",
-                  "Pleural Effusion", "Pneumonia", "Pneumothorax"]
     class_proportions = generate_class_proportions(total=half, props=proportions_multi_class, class_list=class_list)
     generate_batch(model, vae, txt_tok, txt_enc, class_proportions)
 
