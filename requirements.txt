@@ -10,3 +10,4 @@ opencv-python==4.8.1.78
 omegaconf===2.3.0
 wandb==0.16.0
 scipy==1.11.4
+torchxrayvision==1.2.1

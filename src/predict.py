@@ -12,6 +12,7 @@ import torch.nn.functional as F
 import torchvision
 from torch.utils.data import Dataset, DataLoader
 from torchvision.utils import save_image
+import torchxrayvision as xrv
 import os
 import matplotlib.pyplot as plt
 from typing import List, Dict
@@ -19,6 +20,7 @@ from tqdm import tqdm
 import numpy as np
 import json
 import cv2
+import skimage
 
 from config import cfg
 
@@ -37,7 +39,8 @@ class FIDDataset(Dataset):
             transform (callable, optional): functions for img pre-processing
         """
         print(f'Loading Dataset class for FID')
-        self.transform = transform
+        self.transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(), xrv.datasets.XRayResizer(224)])
+
         self.syn_data_path = syn_data_path
         # choose to open train or val image and reports
         with open(orig_data_path, "r") as f:
@@ -57,15 +60,22 @@ class FIDDataset(Dataset):
         syn_path = os.path.join(self.syn_data_path, filename_png)
 
         # Load images & normalize for DenseNet model
-        orig_image = cv2.imread(orig_path, 0)
-        orig_image = cv2.resize(orig_image, [512, 512])
-        orig_image = torch.Tensor(orig_image)[None, ...].expand(3, -1, -1)
-        orig_image = orig_image/255.
+        orig_image = skimage.io.imread(orig_path)
+        orig_image = xrv.datasets.normalize(orig_image, 255)  # convert 8-bit image to [-1024, 1024] range
+        orig_image = orig_image.mean(2)[None, ...]  # Make single color channel
+        orig_image = self.transform(orig_image)
+        orig_image = torch.from_numpy(orig_image)
 
-        syn_image = cv2.imread(syn_path, 0)
-        syn_image = cv2.resize(syn_image, [512, 512])
-        syn_image = torch.Tensor(syn_image)[None, ...].expand(3, -1, -1)
-        syn_image = syn_image/255.
+        syn_image = skimage.io.imread(syn_path)
+        syn_image = xrv.datasets.normalize(syn_image, 255)  # convert 8-bit image to [-1024, 1024] range
+        syn_image = syn_image.mean(2)[None, ...]  # Make single color channel
+        syn_image = self.transform(syn_image)
+        syn_image = torch.from_numpy(syn_image)
+
+        # syn_image = cv2.imread(syn_path, 0)
+        # syn_image = cv2.resize(syn_image, [224, 224])
+        # syn_image = torch.Tensor(syn_image)[None, ...].expand(3, -1, -1)
+        # syn_image = syn_image/255.
 
         return orig_image, syn_image
 
@@ -254,18 +264,18 @@ class DenseNet121(nn.Module):
 
     def __init__(self, out_size):
         super(DenseNet121, self).__init__()
-        self.densenet121 = torchvision.models.densenet121(pretrained=True)
-        num_ftrs = self.densenet121.classifier.in_features
-        # defining the classification layer
-        self.densenet121.classifier = nn.Sequential(
-            nn.Linear(num_ftrs, out_size)
-        )
+        self.densenet121 = xrv.models.DenseNet(weights="densenet121-res224-chex")
+        # self.densenet121 = torchvision.models.densenet121(pretrained=True)
+        # num_ftrs = self.densenet121.classifier.in_features
+        # # defining the classification layer
+        # self.densenet121.classifier = nn.Sequential(
+        #     nn.Linear(num_ftrs, out_size)
+        # )
 
     def forward(self, x):
         features = self.densenet121.features(x)
         out = F.relu(features, inplace=True)
-        out = F.adaptive_avg_pool2d(out, (1, 1))
-        out = torch.flatten(out, 1)
+        out = F.adaptive_avg_pool2d(out, (1, 1)).view(features.size(0), -1)
         return out
 
 
@@ -275,7 +285,7 @@ def compute_fid():
     Returns:
         FID score for a test set of data.
     '''
-    batch_size = 16
+    batch_size = 32
     dataset = FIDDataset(orig_data_path='data/p10_test.json', syn_data_path='results/images/p10_test_synthetic')
 
     # Data loader
@@ -283,10 +293,10 @@ def compute_fid():
 
     # Pretrained model that gets embeddings
     model = DenseNet121(10)
-    print("=> loading checkpoint")
-    checkpoint = torch.load("results/model.pth.tar_epoch_3_1702271233.pth.tar")
-    model.load_state_dict(checkpoint["model_state_dict"])
-    print("=> loaded checkpoint")
+    # print("=> loading checkpoint")
+    # checkpoint = torch.load("results/model.pth.tar_epoch_3_1702271233.pth.tar")
+    # model.load_state_dict(checkpoint["model_state_dict"])
+    # print("=> loaded checkpoint")
     model = model.to(device)
     model.eval()
 
