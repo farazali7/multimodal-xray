@@ -6,6 +6,9 @@ from src.models.model import ModelV2
 from src.models.image_encoders import VQGanVAE
 
 import torch
+import torch.nn as nn
+import torchvision
+from torch.utils.data import Dataset, DataLoader
 from torchvision.utils import save_image
 import os
 import matplotlib.pyplot as plt
@@ -13,11 +16,55 @@ from typing import List, Dict
 from tqdm import tqdm
 import numpy as np
 import json
+import cv2
 
 from config import cfg
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class FIDDataset(Dataset):
+    def __init__(self, orig_data_path, syn_data_path, transform=None):
+        """
+        Another implementation of dataset class used for pytorch dataloader to handle paired images for FID.
+
+        Args:
+            orig_data_path: the path to the original data directory JSON file
+            syn_data_path: the path to the data directory with synthetic images
+            transform (callable, optional): functions for img pre-processing
+        """
+        print(f'Loading Dataset class for FID')
+        self.transform = transform
+        self.syn_data_path = syn_data_path
+        # choose to open train or val image and reports
+        with open(orig_data_path, "r") as f:
+            self.orig_data_dict = json.load(f)
+
+    def __len__(self):
+        return len(self.orig_data_dict['images'])
+
+    def __getitem__(self, idx):
+        # load image
+        img_name = self.orig_data_dict['images'][idx]
+        filename_png = img_name.split('/')[-1].split('.')[0] + '.png'
+
+        # Point path to original image location
+        orig_path = img_name.replace('..', '/w/331/yasamin/multimodal-xray')
+        syn_path = os.path.join(self.syn_data_path, filename_png)
+
+        # Load images & normalize for DenseNet model
+        orig_image = cv2.imread(orig_path, 0)
+        orig_image = cv2.resize(orig_image, [512, 512])
+        orig_image = torch.Tensor(orig_image)[None, ...].expand(3, -1, -1)
+        orig_image /= 255.
+
+        syn_image = cv2.imread(syn_path, 0)
+        syn_image = cv2.resize(syn_image, [512, 512])
+        syn_image = torch.Tensor(syn_image)[None, ...].expand(3, -1, -1)
+        syn_image /= 255.
+
+        return orig_image, syn_image
 
 
 def generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt: List[str] = None, temperature: float = 1.0,
@@ -171,26 +218,12 @@ def generate_p10_test_set(model, vae, txt_tok, txt_enc):
     batch_size = 16
 
     # Load p10 data as filenames and prompts
-    with open('data/train.json', 'r') as file:
-        train_p10 = json.load(file)
-    with open('data/val.json', 'r') as file:
-        val_p10 = json.load(file)
-    with open('data/test.json', 'r') as file:
+    with open('data/p10_test.json', 'r') as file:
         test_p10 = json.load(file)
 
-    # Merge train and val
-    train_p10['images'] += val_p10['images']
-    train_p10['texts'] += val_p10['texts']
-
     # Now find text prompts for each image name
-    image_names = []
-    prompts = []
-    for img in test_p10['images']:
-        filename = img.split('/')[-1].split('.')[0]
-        image_names.append(filename)
-        # img must be in initial train or val
-        prompt = train_p10['texts'][train_p10['images'].index(img)]
-        prompts.append(prompt)
+    image_names = list(test_p10.keys())
+    prompts = list(test_p10.values())
 
     print(f"Got all image names ({len(image_names)}) and prompts ({len(prompts)})")
     curr_batch_dir = f'p10_test_synthetic'
@@ -203,6 +236,68 @@ def generate_p10_test_set(model, vae, txt_tok, txt_enc):
         synthetic = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt,
                                            temperature, steps, topk_threshold, save=False)
         save_image(synthetic[0], os.path.join(dir_path, image_name) + ".png")
+
+
+class DenseNet121(nn.Module):
+    """
+    This model is from:
+    https://github.com/arnoweng/CheXNet
+
+    The architecture of the model is the same as standard DenseNet121
+    except the classifier layer which has an additional sigmoid function.
+
+    """
+
+    def __init__(self, out_size):
+        super(DenseNet121, self).__init__()
+        self.densenet121 = torchvision.models.densenet121(pretrained=True)
+        num_ftrs = self.densenet121.classifier.in_features
+        # defining the classification layer
+        self.densenet121.classifier = nn.Sequential(
+            nn.Linear(num_ftrs, out_size)
+        )
+
+    def forward(self, x):
+        x = self.densenet121(x)
+        return x
+
+
+def compute_fid():
+    '''Compute Frechet-Inception Distance (FID) metric between original and synthetic data distributions.
+
+    Returns:
+        FID score for a test set of data.
+    '''
+    batch_size = 16
+    dataset = FIDDataset(orig_data_path='data/test.json', syn_data_path='results/images/p10_test_synthetic')
+
+    # Data loader
+    dl = DataLoader(dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=1)
+
+    # Pretrained model that gets embeddings
+    model = DenseNet121(10)
+    print("=> loading checkpoint")
+    checkpoint = torch.load("results/model.pth.tar_epoch_3_1702271233.pth.tar")
+    model.load_state_dict(checkpoint["model_state_dict"])
+    print("=> loaded checkpoint")
+    model.eval()
+
+    # Step through data samples
+    all_orig_latents = []
+    all_syn_latents = []
+    for orig, syn in tqdm(dl, total=len(dl)//batch_size):
+        orig, syn = orig.to(device), syn.to(device)
+
+        with torch.no_grad():
+            orig_latents = model(orig)
+            syn_latents = model(syn)
+
+            all_orig_latents.append(orig_latents)
+            all_syn_latents.append(syn_latents)
+
+
+
+
 
 
 if __name__ == "__main__":
