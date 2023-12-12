@@ -5,6 +5,7 @@ from src.models.text_encoders import get_text_embeddings, get_cxr_bert_tokenizer
 from src.models.model import ModelV2
 from src.models.image_encoders import VQGanVAE
 from src.utils.metrics import calculate_fid
+from config import cfg
 
 import torch
 import torch.nn as nn
@@ -21,9 +22,6 @@ import numpy as np
 import json
 import cv2
 import skimage
-
-from config import cfg
-
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
