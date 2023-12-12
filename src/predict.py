@@ -41,13 +41,14 @@ class FIDDataset(Dataset):
         # choose to open train or val image and reports
         with open(orig_data_path, "r") as f:
             self.orig_data_dict = json.load(f)
+        self.orig_data_names = list(self.orig_data_dict.keys())
 
     def __len__(self):
-        return len(self.orig_data_dict['images'])
+        return len(self.orig_data_names)
 
     def __getitem__(self, idx):
         # load image
-        img_name = self.orig_data_dict['images'][idx]
+        img_name = self.orig_data_names[idx]
         filename_png = img_name.split('/')[-1].split('.')[0] + '.png'
 
         # Point path to original image location
@@ -271,7 +272,7 @@ def compute_fid():
         FID score for a test set of data.
     '''
     batch_size = 16
-    dataset = FIDDataset(orig_data_path='data/test.json', syn_data_path='results/images/p10_test_synthetic')
+    dataset = FIDDataset(orig_data_path='data/p10_test.json', syn_data_path='results/images/p10_test_synthetic')
 
     # Data loader
     dl = DataLoader(dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=1)
@@ -353,6 +354,8 @@ if __name__ == "__main__":
     # class_proportions = generate_class_proportions(total=total, props=proportions_multi_class, class_list=class_list)
     # generate_batch(model, vae, txt_tok, txt_enc, class_proportions)
 
-    generate_p10_test_set(model, vae, txt_tok, txt_enc)
+    # generate_p10_test_set(model, vae, txt_tok, txt_enc)
+
+    compute_fid()
 
     print('Done')
