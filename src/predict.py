@@ -293,7 +293,7 @@ def compute_fid():
     # Step through data samples
     all_orig_latents = []
     all_syn_latents = []
-    for orig, syn in tqdm(dl, total=len(dl)//batch_size):
+    for orig, syn in tqdm(dl, total=len(dl)):
         orig, syn = orig.to(device), syn.to(device)
 
         with torch.no_grad():
