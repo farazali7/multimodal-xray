@@ -200,7 +200,7 @@ if __name__ == "__main__":
     half = 2342
 
     # Given proportions for a multi-label problem
-    proportions_multi_label = [307, 1312, 226, 855, 217, 260, 1148, 1537, 629, 326]
+    proportions_multi_label = [1307, 1312, 226, 855, 217, 260, 1148, 1537, 629, 326]
 
     # Convert to proportions for a multi-class problem
     proportions_sum = np.sum(proportions_multi_label)
