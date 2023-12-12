@@ -128,28 +128,25 @@ def generate_batch(model, vae, txt_tok, txt_enc, class_proportions: Dict):
     for cls_name, cls_amount in class_proportions.items():
         print(f'GENERATING {cls_amount} SAMPLES FOR CLASS: {cls_name}')
         prompt = [cls_name]
-        for i in tqdm(range(cls_amount), total=cls_amount):
+        # Create batches of the prompt
+        # Calculate the number of iterations needed to reach the total_elements
+        num_iterations = cls_amount // batch_size + (cls_amount % batch_size > 0)
 
-            # Create batches of the prompt
-            # Calculate the number of iterations needed to reach the total_elements
-            num_iterations = cls_amount // batch_size + (cls_amount % batch_size > 0)
+        for i in range(num_iterations):
+            # Calculate the number of instances of the string for the current iteration
+            instances = min(batch_size, cls_amount - i * batch_size)
+            prompt_list = prompt * instances
 
-            prompts_list = []
-            for j in range(num_iterations):
-                # Calculate the number of instances of the string for the current iteration
-                instances = min(batch_size, cls_amount - i * batch_size)
-                prompt_list = prompt * instances
+            synthetic = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt_list,
+                                               temperature, steps, topk_threshold, save=False)
 
-                synthetic = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt_list,
-                                                   temperature, steps, topk_threshold, save=False)
+            # Save and log id + class
+            for j in range(instances):
+                id = str(uuid.uuid4()) + f'-{str.lower(cls_name)}'
+                data_info['images'].append(id)
+                data_info['class'].append(str.lower(cls_name))
 
-                # Save and log id + class
-                for k in range(instances):
-                    id = str(uuid.uuid4()) + f'-{str.lower(cls_name)}'
-                    data_info['images'].append(id)
-                    data_info['class'].append(str.lower(cls_name))
-
-                    save_image(synthetic[k], os.path.join(dir_path, id) + ".png")
+                save_image(synthetic[j], os.path.join(dir_path, id) + ".png")
 
     output_file = os.path.join(dir_path, 'data_info.json')
     # Save final data info as json
