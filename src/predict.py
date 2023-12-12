@@ -8,6 +8,7 @@ from src.utils.metrics import calculate_fid
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision
 from torch.utils.data import Dataset, DataLoader
 from torchvision.utils import save_image
@@ -261,8 +262,11 @@ class DenseNet121(nn.Module):
         )
 
     def forward(self, x):
-        x = self.densenet121(x)
-        return x
+        features = self.densenet121.features(x)
+        out = F.relu(features, inplace=True)
+        out = F.adaptive_avg_pool2d(out, (1, 1))
+        out = torch.flatten(out, 1)
+        return out
 
 
 def compute_fid():
@@ -303,6 +307,9 @@ def compute_fid():
     syn_latents_vec = torch.concatenate(all_syn_latents, dim=0).cpu().numpy()
 
     print(f'Got all latents, computing FID between distributions...')
+    print(f'Original data latents shape: {orig_latents_vec.shape}')
+    print(f'Synthetic data latents shape: {syn_latents_vec.shape}')
+
     # Compute FID scores between two distributions
     fid = calculate_fid(orig_latents_vec, syn_latents_vec)
 
