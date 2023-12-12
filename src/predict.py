@@ -192,7 +192,7 @@ def generate_p10_test_set(model, vae, txt_tok, txt_enc):
         prompt = train_p10['texts'][train_p10['images'].index(img)]
         prompts.append(prompt)
 
-    print(f"Got all image names ({len(image_names)}) and prompts ({len(prompts)})}")
+    print(f"Got all image names ({len(image_names)}) and prompts ({len(prompts)})")
     curr_batch_dir = f'p10_test_synthetic'
     dir_path = os.path.join('results/images', curr_batch_dir)
     if not os.path.exists(dir_path):
