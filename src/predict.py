@@ -121,7 +121,7 @@ def generate_batch(model, vae, txt_tok, txt_enc, class_proportions: Dict):
         os.makedirs(dir_path)
 
     data_info = {'images': [],
-                 'texts': []}
+                 'class': []}
     for cls_name, cls_amount in class_proportions.items():
         print(f'Generating class: {cls_name}')
         prompt = [cls_name]
