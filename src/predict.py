@@ -60,13 +60,17 @@ class FIDDataset(Dataset):
         # Load images & normalize for DenseNet model
         orig_image = skimage.io.imread(orig_path)
         orig_image = xrv.datasets.normalize(orig_image, 255)  # convert 8-bit image to [-1024, 1024] range
-        orig_image = orig_image.mean(2)[None, ...]  # Make single color channel
+        if len(orig_image.shape) > 2:
+            orig_image = orig_image.mean(2)
+        orig_image = orig_image[None, ...]  # Make single color channel
         orig_image = self.transform(orig_image)
         orig_image = torch.from_numpy(orig_image)
 
         syn_image = skimage.io.imread(syn_path)
         syn_image = xrv.datasets.normalize(syn_image, 255)  # convert 8-bit image to [-1024, 1024] range
-        syn_image = syn_image.mean(2)[None, ...]  # Make single color channel
+        if len(syn_image.shape) > 2:
+            syn_image = syn_image.mean(2)
+        syn_image = syn_image[None, ...]  # Make single color channel
         syn_image = self.transform(syn_image)
         syn_image = torch.from_numpy(syn_image)
 
