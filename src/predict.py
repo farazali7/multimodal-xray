@@ -1,3 +1,6 @@
+import datetime
+import uuid
+
 from src.models.text_encoders import get_text_embeddings, get_cxr_bert_tokenizer_and_encoder
 from src.models.model import ModelV2
 from src.models.image_encoders import VQGanVAE
@@ -6,9 +9,10 @@ import torch
 from torchvision.utils import save_image
 import os
 import matplotlib.pyplot as plt
-from typing import List
+from typing import List, Dict
 from tqdm import tqdm
 import numpy as np
+import json
 
 from config import cfg
 
@@ -93,6 +97,59 @@ def experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt: List[str] =
         plt.close()
 
 
+def generate_batch(model, vae, txt_tok, txt_enc, class_proportions: Dict):
+    """ Generate batch of synthetic data given optional class list and corresponding frequencies.
+
+    Args:
+        model: Transformer model
+        vae: VQGAN VAE model
+        txt_tok: Text tokenizer model
+        txt_enc: Encoder model
+        class_proportions: Dict of class name (prompt) as key and desired amount as value
+
+    Returns:
+        Saves a batch of synthetic images.
+    """
+    # Decoding parameters
+    temperature = 1.3
+    steps = 3
+    topk_threshold = 0.5
+
+    curr_batch_dir = f'batch_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+    dir_path = os.path.join('results/images', curr_batch_dir)
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
+    data_info = {'images': [],
+                 'texts': []}
+    for cls_name, cls_amount in class_proportions.items():
+        print(f'Generating class: {cls_name}')
+        prompt = [cls_name]
+        for i in tqdm(range(cls_amount), total=cls_amount):
+            synthetic = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt,
+                                               temperature, steps, topk_threshold, save=False)
+
+            # Save and log id + class
+            id = str(uuid.uuid4()) + f'-{str.lower(cls_name)}'
+            data_info['images'].append(id)
+            data_info['class'].append(str.lower(cls_name))
+
+            save_image(synthetic[0], os.path.join(dir_path, id) + ".png")
+
+    output_file = os.path.join(dir_path, 'data_info.json')
+    # Save final data info as json
+    with open(output_file, 'w') as file:
+        json.dump(data_info, file, indent=4)
+
+
+def generate_class_proportions(total, props, class_list):
+    res = {}
+    for cls, prop in zip(class_list, props):
+        n = int(total * (1.0 - prop))
+        res[cls] = n
+
+    return res
+
 
 if __name__ == "__main__":
     model_args = cfg['MODEL']['ModelV2']
@@ -119,8 +176,24 @@ if __name__ == "__main__":
 
     print(f"GENERATING WITH CKPT PATH: {ckpt_path}...")
     # Create and save pictures
-    experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt, 'all_maskloss_moredetail')
+    # experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt, 'all_maskloss_moredetail')
     # cxr1 = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt, 1.0, 18, 0.9, 'image1')
     # cxr2 = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt, 1.0, 10, 0.9, 'image2')
+
+    # GENERATE BATCHES OF DATA BY CLASS (50% and 100% of train set)
+    total = 4684
+    half = 2342
+
+    # Given proportions for a multi-label problem
+    proportions_multi_label = [0.279, 0.280, 0.048, 0.183, 0.046, 0.056, 0.245, 0.328, 0.134, 0.070]
+
+    # Convert to proportions for a multi-class problem
+    proportions_sum = np.sum(proportions_multi_label)
+    proportions_multi_class = [prop / proportions_sum for prop in proportions_multi_label]
+
+    class_list = ["Atelectasis", "Cardiomegaly", "Consolidation", "Edema", "Fracture", "Lung Lesion", "Lung Opacity",
+                  "Pleural Effusion", "Pneumonia", "Pneumothorax"]
+    class_proportions = generate_class_proportions(total=half, props=proportions_multi_class, class_list=class_list)
+    generate_batch(model, vae, txt_tok, txt_enc, class_proportions)
 
     print('Done')
