@@ -194,7 +194,6 @@ if __name__ == "__main__":
 
     # GENERATE BATCHES OF DATA BY CLASS (50% and 100% of train set)
     total = 4684
-    half = 2342
 
     # Given proportions for a multi-label problem
     proportions_multi_label = [1307, 1312, 226, 855, 217, 260, 1148, 1537, 629, 326]
@@ -208,7 +207,7 @@ if __name__ == "__main__":
     proportions_multi_class = [prop / proportions_sum for prop in proportions_multi_label]
     proportions_multi_class.reverse()  # Least frequency class gets highest proportion now
 
-    class_proportions = generate_class_proportions(total=half, props=proportions_multi_class, class_list=class_list)
+    class_proportions = generate_class_proportions(total=total, props=proportions_multi_class, class_list=class_list)
     generate_batch(model, vae, txt_tok, txt_enc, class_proportions)
 
     print('Done')
