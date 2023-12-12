@@ -200,13 +200,11 @@ if __name__ == "__main__":
     half = 2342
 
     # Given proportions for a multi-label problem
+    proportions_multi_label = [1307, 1312, 226, 855, 217, 260, 1148, 1537, 629, 326]
     class_list = ["Atelectasis", "Cardiomegaly", "Consolidation", "Edema", "Fracture", "Lung Lesion", "Lung Opacity",
                   "Pleural Effusion", "Pneumonia", "Pneumothorax"]
-    proportions_multi_label = [1307, 1312, 226, 855, 217, 260, 1148, 1537, 629, 326]
     # Sort them together
-    idxs = np.argsort(proportions_multi_label)
-    class_list = class_list[idxs]
-    proportions_multi_label = proportions_multi_label[idxs]
+    proportions_multi_label, class_list = (list(t) for t in zip(*sorted(zip(proportions_multi_label, class_list))))
 
     # Convert to proportions for a multi-class problem
     proportions_sum = np.sum(proportions_multi_label)
