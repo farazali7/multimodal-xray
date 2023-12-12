@@ -382,8 +382,7 @@ def compute_mssim(txt_tok):
         prompt_length = torch.sum(tokenizer_output.attention_mask).item()
 
         # Store in DataFrame
-        new_row = {'image_name': filename, 'mssim': score, 'prompt_length': prompt_length}
-        res = res.append(new_row, ignore_index=True)
+        res.loc[i] = [filename, score, prompt_length]
 
     res.to_csv('results/mssim_results.csv', index=False)
 
