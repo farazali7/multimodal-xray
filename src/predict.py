@@ -163,6 +163,48 @@ def generate_class_proportions(total, props, class_list):
     return res
 
 
+def generate_p10_test_set(model, vae, txt_tok, txt_enc):
+    # Decoding parameters
+    temperature = 1.3
+    steps = 3
+    topk_threshold = 0.5
+    batch_size = 16
+
+    # Load p10 data as filenames and prompts
+    with open('data/train.json', 'r') as file:
+        train_p10 = json.load(file)
+    with open('data/val.json', 'r') as file:
+        val_p10 = json.load(file)
+    with open('data/test.json', 'r') as file:
+        test_p10 = json.load(file)
+
+    # Merge train and val
+    train_p10['images'] += val_p10['images']
+    train_p10['texts'] += val_p10['texts']
+
+    # Now find text prompts for each image name
+    image_names = []
+    prompts = []
+    for img in test_p10['images']:
+        filename = img.split('/')[-1].split('.')[0]
+        image_names.append(filename)
+        # img must be in initial train or val
+        prompt = train_p10['texts'][train_p10['images'].index(img)]
+        prompts.append(prompt)
+
+    print(f"Got all image names ({len(image_names)}) and prompts ({len(prompts)})}")
+    curr_batch_dir = f'p10_test_synthetic'
+    dir_path = os.path.join('results/images', curr_batch_dir)
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
+    for i, image_name in tqdm(enumerate(image_names), total=len(image_names)):
+        prompt = [prompts[i]]
+        synthetic = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt,
+                                           temperature, steps, topk_threshold, save=False)
+        save_image(synthetic[0], os.path.join(dir_path, image_name) + ".png")
+
+
 if __name__ == "__main__":
     model_args = cfg['MODEL']['ModelV2']
     encoder_args = model_args['ENCODER']
@@ -189,25 +231,25 @@ if __name__ == "__main__":
     print(f"GENERATING WITH CKPT PATH: {ckpt_path}...")
     # Create and save pictures
     # experiment_decoding_params(model, vae, txt_tok, txt_enc, prompt, 'all_maskloss_moredetail')
-    # cxr1 = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt, 1.0, 18, 0.9, 'image1')
-    # cxr2 = generate_synthetic_cxr(model, vae, txt_tok, txt_enc, prompt, 1.0, 10, 0.9, 'image2')
 
     # GENERATE BATCHES OF DATA BY CLASS (50% and 100% of train set)
-    total = 4684
+    # total = 4684
+    #
+    # # Given proportions for a multi-label problem
+    # proportions_multi_label = [1307, 1312, 226, 855, 217, 260, 1148, 1537, 629, 326]
+    # class_list = ["Atelectasis", "Cardiomegaly", "Consolidation", "Edema", "Fracture", "Lung Lesion", "Lung Opacity",
+    #               "Pleural Effusion", "Pneumonia", "Pneumothorax"]
+    # # Sort them together
+    # proportions_multi_label, class_list = (list(t) for t in zip(*sorted(zip(proportions_multi_label, class_list))))
+    #
+    # # Convert to proportions for a multi-class problem
+    # proportions_sum = np.sum(proportions_multi_label)
+    # proportions_multi_class = [prop / proportions_sum for prop in proportions_multi_label]
+    # proportions_multi_class.reverse()  # Least frequency class gets highest proportion now
+    #
+    # class_proportions = generate_class_proportions(total=total, props=proportions_multi_class, class_list=class_list)
+    # generate_batch(model, vae, txt_tok, txt_enc, class_proportions)
 
-    # Given proportions for a multi-label problem
-    proportions_multi_label = [1307, 1312, 226, 855, 217, 260, 1148, 1537, 629, 326]
-    class_list = ["Atelectasis", "Cardiomegaly", "Consolidation", "Edema", "Fracture", "Lung Lesion", "Lung Opacity",
-                  "Pleural Effusion", "Pneumonia", "Pneumothorax"]
-    # Sort them together
-    proportions_multi_label, class_list = (list(t) for t in zip(*sorted(zip(proportions_multi_label, class_list))))
-
-    # Convert to proportions for a multi-class problem
-    proportions_sum = np.sum(proportions_multi_label)
-    proportions_multi_class = [prop / proportions_sum for prop in proportions_multi_label]
-    proportions_multi_class.reverse()  # Least frequency class gets highest proportion now
-
-    class_proportions = generate_class_proportions(total=total, props=proportions_multi_class, class_list=class_list)
-    generate_batch(model, vae, txt_tok, txt_enc, class_proportions)
+    generate_p10_test_set(model, vae, txt_tok, txt_enc)
 
     print('Done')
