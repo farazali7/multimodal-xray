@@ -1,6 +1,8 @@
 import datetime
 import uuid
 
+import pandas as pd
+
 from src.models.text_encoders import get_text_embeddings, get_cxr_bert_tokenizer_and_encoder
 from src.models.model import ModelV2
 from src.models.image_encoders import VQGanVAE
@@ -13,6 +15,7 @@ import torch.nn.functional as F
 import torchvision
 from torch.utils.data import Dataset, DataLoader
 from torchvision.utils import save_image
+from torchmetrics.image import MultiScaleStructuralSimilarityIndexMeasure
 import torchxrayvision as xrv
 import os
 import matplotlib.pyplot as plt
@@ -331,6 +334,62 @@ def compute_fid():
     print(f'FID SCORE: {fid}')
 
 
+def compute_mssim(txt_tok):
+    """Compute Multi-scale Structural Similiarity Index Measure between pairs of synthetic images.
+
+    Args:
+        txt_tok: Text tokenizer for calculating prompt length
+    Returns:
+        Saves a dataframe containing the mssim score between pairs of images and the prompt length.
+    """
+    # Load p10 data as filenames and prompts
+    with open('data/p10_test.json', 'r') as file:
+        test_p10 = json.load(file)
+
+    # Now find text prompts for each image name
+    image_names = list(test_p10.keys())
+    prompts = list(test_p10.values())
+
+    mssim = MultiScaleStructuralSimilarityIndexMeasure(data_range=1.0)
+
+    res = pd.DataFrame(columns=['image_name', 'mssim', 'prompt_length'])
+    for i, image_name in tqdm(enumerate(image_names), total=len(image_names)):
+        filename = image_name.split('/')[-1].split('.')[0] + '.png'
+
+        # Load images
+        v1_path = os.path.join('results/images/p10_test_synthetic', filename)
+        image1 = cv2.imread(v1_path, 0)
+        image1 = cv2.resize(image1, [512, 512])
+        image1 = image1 / np.max(image1)
+        image1 = torch.Tensor(image1)[None, None, ...]
+
+        v2_path = os.path.join('results/images/p10_test_synthetic_v2', filename)
+        image2 = cv2.imread(v2_path, 0)
+        image2 = cv2.resize(image2, [512, 512])
+        image2 = image2 / np.max(image2)
+        image2 = torch.Tensor(image2)[None, None, ...]
+
+        # Calculate MSSIM
+        score = mssim(image1, image2).item()
+
+        # Get prompt length
+        prompt = [prompts[i]]
+        tokenizer_output = txt_tok.batch_encode_plus(batch_text_or_text_pairs=prompt,
+                                                     padding='max_length',
+                                                     max_length=256,
+                                                     truncation=True,
+                                                     return_tensors='pt')
+        prompt_length = torch.sum(tokenizer_output.attention_mask).item()
+
+        # Store in DataFrame
+        new_row = {'image_name': filename, 'mssim': score, 'prompt_length': prompt_length}
+        res = res.append(new_row, ignore_index=True)
+
+    res.to_csv('results/mssim_results.csv', index=False)
+    
+    return res
+
+
 if __name__ == "__main__":
     model_args = cfg['MODEL']['ModelV2']
     encoder_args = model_args['ENCODER']
@@ -349,7 +408,7 @@ if __name__ == "__main__":
 
     ckpt_path = 'results/all_maskloss/epoch=98-step=740223.ckpt'
     checkpoint = torch.load(ckpt_path, map_location=device)
-    sd = {x.replace('model.', '') : v for x, v in checkpoint['state_dict'].items()}
+    sd = {x.replace('model.', ''): v for x, v in checkpoint['state_dict'].items()}
     model.load_state_dict(sd)
 
     model = model.to(device)
@@ -378,6 +437,6 @@ if __name__ == "__main__":
 
     # generate_p10_test_set(model, vae, txt_tok, txt_enc)
 
-    compute_fid()
+    compute_fid(txt_tok)
 
     print('Done')
