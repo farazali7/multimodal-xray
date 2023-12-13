@@ -86,7 +86,7 @@ def train(model, data_path, ckpt_path, device, resume=True):
             best_val_auroc = val_auroc
             # Save checkpoint with unique identifier (e.g., timestamp or epoch)
             timestamp = int(time.time())
-            new_ckpt_path = f"{ckpt_path}_epoch_{epoch+1}_{timestamp}.pth.tar"
+            new_ckpt_path = f"{ckpt_path}_epoch_{epoch+1}_{timestamp}_50_synth_real.pth.tar"
             save_checkpoint = {
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
@@ -104,7 +104,7 @@ def evaluate(model, val_loader, device):
 
    
 
-    auroc_metric = MultilabelAUROC(num_labels=N_CLASSES)
+    auroc_metric = MultilabelAUROC(num_labels=N_CLASSES, average=None)
 
 
     with torch.no_grad():
@@ -116,7 +116,10 @@ def evaluate(model, val_loader, device):
             predictions = torch.sigmoid(outputs)  # get probabilities
             auroc_metric.update(predictions, labels)
 
-    aurocs = auroc_metric.compute() 
+    aurocs = auroc_metric.compute()
+    print(f"avg, {aurocs}")
+
+
     avg_auroc = torch.mean(aurocs)
     print(f'Average AUROC: {avg_auroc.item()}')
 
@@ -191,8 +194,10 @@ if __name__ == "__main__":
     model = DenseNet121(N_CLASSES)
     ckpt_path = CKPT_PATH
 
-    new_ckpt = "model.pth.tar_epoch_3_1702271233.pth.tar"
-
+    #new_ckpt = "model.pth.tar_epoch_3_1702271233.pth.tar"
+    #new_ckpt = 'model.pth.tar_epoch_5_1702363602_synth_real.pth.tar'
     #train(model, data_path, ckpt_path, device, resume=True)
+
+    new_ckpt = 'model.pth.tar_epoch_3_1702390666_50_synth_real.pth.tar'
 
     test(data_path, new_ckpt, device)
