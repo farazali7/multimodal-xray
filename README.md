@@ -39,6 +39,13 @@ doi = {10.1038/s41597-019-0322-0}
    ```shell
    wget -r -N -c -np --user YOUR_USERNAME --ask-password https://physionet.org/files/mimic-cxr/2.0.0/
 
+## Instructions to run
+To run inference using our pipeline or train the constituent models, run the following commands:
+```
+!git clone https://github.com/farazali7/multimodal-xray.git
+!pip install -r requirements.txt
+cd src
+```
 
 ## Metrics used for evaluation
 1. Area Under the Receiver Operating Characteristic Curve (AUROC)
@@ -47,11 +54,13 @@ doi = {10.1038/s41597-019-0322-0}
 4. F1 score
 
 ## Results
-
+Comparison of average AUROC values of the downstream classifier. The P10 subset of the MIMIC CXR data was used to train the downstream classifier for RayGen. The results were tested with 605 real chest x-ray images.
 ![image](https://github.com/farazali7/multimodal-xray/assets/66198904/17e5d73e-f6b9-48c3-b826-51e907834a4c)
 
+Comparison of class-wise AUROC values of the downstream classifier.
 ![image](https://github.com/farazali7/multimodal-xray/assets/66198904/4da30cd6-02df-4a70-bc59-114452022c3f)
 
+This figure is an illustration of the progressive unmasking of the fully masked figure using the prompt: "Pneumothorax" at different time steps from t=0 having the fully masked images and t=3 depicted with a fully unmasked chest x-ray image.
 <img width="479" alt="pic2" src="https://github.com/farazali7/multimodal-xray/assets/66198904/f275ad30-d34e-4d9c-84f8-fd5d471c54a3">
 
 <img width="554" alt="pic3" src="https://github.com/farazali7/multimodal-xray/assets/66198904/cfe562d9-c365-4d4c-b7a4-8317b4a691c8">
