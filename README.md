@@ -11,7 +11,7 @@ Our model consists of several parts, some trained and others adapted from pre-tr
 Please see the following associated manuscript of this project for further details of 
 the model and results. 
 
-[![](https://img.shields.io/badge/PAPER-37a779?style=for-the-badge)](./RayGen_Paper.pdf)
+[![](https://img.shields.io/badge/PAPER-37a779?style=for-the-badge)](./raygen_paper.pdf)
 
 ## Model architectures used
 - Image Encoder: VQ-GAN (pre-trained)
