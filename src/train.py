@@ -5,6 +5,8 @@ TRAINING SCRIPT
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
+from typing import Tuple
 
 import torch
 import lightning as L
@@ -18,6 +20,8 @@ from torch.utils.data.distributed import DistributedSampler as DS
 
 from config import cfg
 from src.models.model import FinalModelV1, FinalModelV2
+from src.models.image_encoders import VQGanVAE
+from src.models.text_encoders import get_cxr_bert_tokenizer_and_encoder, get_text_embeddings
 
 from torch.utils.data import Dataset
 from PIL import Image
@@ -27,40 +31,52 @@ import json
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
+from lightning.pytorch.loggers import WandbLogger
+
+os.environ['WANDB_MODE'] = cfg['WANDB']['MODE']
 
 
 class UpdatedDatasetClass(Dataset):
-    def __init__(self, data_path, transform=None, is_train=True):
+    def __init__(self, data_path, text_tokens_path, vae, transform=None, perc=None):
         """
         Another implementation of dataset class used for pytorch dataloader to handle the imgs and text
 
         Args:
             data_path: the path to the data directory with The JSON file corresponding to the data (../data_preprocess)
+            vae: VQGANVAE Model for image encoding (from dictionary)
+            text_tokens_path: Path to file containing all text reports tokenized
             transform (callable, optional): functions for img pre-processing
-            is_train (bool): to differentiate between train and validation dataset.
+            perc: Float between 0.0 and 1.0 representing amount of data to take if specified
         """
+        print(f'Loading Dataset class for {data_path}')
         self.data_path = data_path
+        self.vae = vae
         self.transform = transform
-        self.is_train = is_train
         # choose to open train or val image and reports
-        with open(os.path.join(data_path, 'train.json' if is_train else 'val.json')) as f:
-            self.data_index = json.load(f)
+        with open(data_path, "rb") as f:
+            self.data_index = pickle.load(f)
+
+        with (open(text_tokens_path, "rb")) as txt_tokens:
+            self.text_tokens = pickle.load(txt_tokens)
+
+        # Get subset of data is specified
+        if perc is not None:
+            n_keep = int(len(self.data_index) * perc)
+            self.data_index = self.data_index[:n_keep]
 
     def __len__(self):
-        return len(self.data_index['images'])
+        return len(self.data_index)
 
     def __getitem__(self, idx):
         # load image
-        img_path = os.path.join(self.data_path, self.data_index['images'][idx])
-        image = Image.open(img_path).convert('RGB')
-        if self.transform:
-            image = self.transform(image)
+        img_name = self.data_index[idx]
+        image = self.vae.get_codebook_indices(img_name).squeeze()
 
         # text data and label
-        text = self.data_index['texts'][idx]
-        label = self.data_index['labels'][idx]
+        # [1, 256, 2]
+        text = self.text_tokens[img_name].squeeze()
 
-        return image, text, label
+        return image, text
 
 
 def plot_loss(loss_array):
@@ -71,7 +87,8 @@ def plot_loss(loss_array):
     plt.show()
 
 
-def train(data_path: str, model_args: dict, log_args:dict, chkpt_args:dict, trainer_args: dict, batch_size:int):
+def train(train_paths: Tuple[str, str], val_paths: Tuple[str, str], model_args: dict,
+          log_args:dict, chkpt_args:dict, trainer_args: dict, batch_size:int, data_perc: float):
     """Train a model.
 
     Args:
@@ -92,22 +109,42 @@ def train(data_path: str, model_args: dict, log_args:dict, chkpt_args:dict, trai
         transforms.ToTensor(),
     ])
 
-    train_dataset = UpdatedDatasetClass(data_path, transform=transform, is_train=True)
-    val_dataset = UpdatedDatasetClass(data_path, transform=transform, is_train=False)
+    encoder_args = model_args['model_args']['ENCODER']
+    print(f'Loading VQGAN...')
+    vae = VQGanVAE(**encoder_args)
+    print(f'VQGAN loaded!')
+
+    _, text_model = get_cxr_bert_tokenizer_and_encoder()
+    model_args['model_args']['tokenizer'] = text_model
+
+    # ---------------
+
+    # WANDB Logger
+    wandb_logger = WandbLogger(project="multimodal_xray")
+
+    train_dataset = UpdatedDatasetClass(*train_paths, vae=vae, transform=transform, perc=data_perc)
+    val_dataset = UpdatedDatasetClass(*val_paths, vae=vae, transform=transform, perc=data_perc)
 
     # data loader  
-    train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_dl = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    train_dl = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=1)
+    val_dl = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=0)
 
     # Instantiate the model
     model = FinalModelV2(**model_args)
     checkpoint = ModelCheckpoint(**chkpt_args)
-    logger = TensorBoardLogger(**log_args)
+
+    # log gradients and model topology
+    # wandb_logger.watch(model)
+    logger = wandb_logger
+    # logger = TensorBoardLogger(**log_args)
+
     # Instantiate the PyTorch Lightning Trainer
     trainer = L.Trainer(**trainer_args, callbacks=checkpoint, logger=logger)
     
     # Fit the model
     trainer.fit(model=model, train_dataloaders=train_dl, val_dataloaders=val_dl)
+
+    wandb_logger.experiment.unwatch(model)
 
 
 if __name__ == "__main__":
@@ -118,12 +155,17 @@ if __name__ == "__main__":
     chkpt_args = cfg['CALLBACK']
     trainer_args = train_args['TRAINER']
     LR = train_args['LR']
-    data_path = cfg['DATA']['PATH']
-    model_args = {'model_def': model_def,
-                  'model_args': model_instance_args,
+    data_perc = train_args['DATA_PERC']
+    train_data_path = cfg['DATA']['TRAIN_PATH']
+    train_text_tokens_path = cfg['DATA']['TRAIN_TEXT_TOKEN_PATH']
+    val_data_path = cfg['DATA']['VAL_PATH']
+    val_text_tokens_path = cfg['DATA']['VAL_TEXT_TOKEN_PATH']
+    model_args = {'model_args': model_instance_args,
                   'lr': LR}
     log_args = cfg['LOGGER']
+    batch_size = train_args['BATCH_SIZE']
 
     # Train the model
-    train(data_path, model_args, log_args, chkpt_args, trainer_args)
+    train((train_data_path, train_text_tokens_path), (val_data_path, val_text_tokens_path),
+          model_args, log_args, chkpt_args, trainer_args, batch_size=batch_size, data_perc=data_perc)
     

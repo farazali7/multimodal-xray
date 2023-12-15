@@ -1,7 +1,18 @@
 import torch.nn as nn
+import torch.nn.functional as F
 from typing import Optional
 
 from src.models.attention import MultiHeadAttentionBlock
+
+
+class GEGLU(nn.Module):
+    def __init__(self):
+        super(GEGLU, self).__init__()
+
+    def forward(self, x):
+        x, gate = x.chunk(2, dim=-1)
+
+        return gate * F.gelu(x)
 
 
 class FeedForwardNetwork(nn.Module):
@@ -26,6 +37,32 @@ class FeedForwardNetwork(nn.Module):
         x = self.dropout_1(x)
         x = self.linear_2(x)
         x = self.dropout_2(x)
+
+        return x
+
+
+class FeedForwardNetwork2(nn.Module):
+    def __init__(self, embed_dim: int, hidden_dim: int, dropout: float = 0.0):
+        """ Feed forward network 2 from Muse paper, (2-layer dense network).
+
+        Args:
+            embed_dim: Dimensionality of input sequence
+            hidden_dim: Dimensionality of hidden layers in feed forward network
+            dropout: Amount of dropout in feed forward network
+        """
+        super(FeedForwardNetwork2, self).__init__()
+        self.layer_norm_1 = nn.LayerNorm(embed_dim)
+        self.linear_1 = nn.Linear(embed_dim, hidden_dim * 2, bias=False)
+        self.activation = GEGLU()
+        self.layer_norm_2 = nn.LayerNorm(hidden_dim)
+        self.linear_2 = nn.Linear(hidden_dim, embed_dim, bias=False)
+
+    def forward(self, x):
+        x = self.layer_norm_1(x)
+        x = self.linear_1(x)
+        x = self.activation(x)
+        x = self.layer_norm_2(x)
+        x = self.linear_2(x)
 
         return x
 
@@ -128,7 +165,8 @@ class TransformerDecoderLayer(nn.Module):
                                                  attention_type=attention_type,
                                                  dropout=dropout,
                                                  n_features=n_features)
-        self.ffn = FeedForwardNetwork(embed_dim, hidden_dim, dropout)
+        # self.ffn = FeedForwardNetwork(embed_dim, hidden_dim, dropout)
+        self.ffn = FeedForwardNetwork2(embed_dim, hidden_dim, dropout)
 
     def forward(self, input):
         x, context = input
@@ -136,12 +174,12 @@ class TransformerDecoderLayer(nn.Module):
         # Self attention
         mha_out = self.mha(x)
         x = mha_out + x  # Skip connection
-        x = self.layer_norm_1(x)
+        # x = self.layer_norm_1(x)
 
         # Cross attention (x is from text and context is from image tokens)
         cross_mha_out = self.cross_mha(x, context)
         x = cross_mha_out + x
-        x = self.layer_norm_2(x)
+        # x = self.layer_norm_2(x)
 
         # FFN
         ffn_out = self.ffn(x)

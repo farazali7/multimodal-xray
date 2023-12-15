@@ -7,6 +7,7 @@ import math
 from einops import rearrange
 from tqdm import tqdm
 
+from src.models.unet import UNet
 from src.models.transformer import ViTEncoder, TransformerDecoder
 from src.models.image_encoders import get_biovil_image_encoder, VQGanVAE
 from src.models.text_encoders import get_cxr_bert_tokenizer_and_encoder, get_text_embeddings
@@ -82,7 +83,7 @@ class ModelV1(nn.Module):
 
 
 class ModelV2(nn.Module):
-    def __init__(self, decoder_args: dict, projector_args: dict):
+    def __init__(self, tokenizer, decoder_args: dict, projector_args: dict, device: str = 'cpu'):
         """Final model v2.0 - uses masked vision token modelling
 
             Args:
@@ -108,12 +109,26 @@ class ModelV2(nn.Module):
         # Final MLP
         self.final_dense = nn.Linear(in_features=decoder_args['embed_dim'], out_features=1024)
 
+        # self.unet = UNet(enc_chs=(1, 64, 128), dec_chs=(128, 64), num_class=1)
+        self.device = device
+
+        self.tokenizer = tokenizer
+        for p in self.tokenizer.parameters():
+            p.requires_grad = False
+
     def _cosine_schedule(self, t):
         return torch.cos(t * math.pi * 0.5)
 
     def forward(self, x_img, x_txt):
         # Assume x_img is of shape [B, 1024] and x_txt is of shape [B, T, Dt]
         batch, seq_len = x_img.shape
+
+        x_txt_ids, x_txt_attn_mask = x_txt[..., 0], x_txt[..., 1]
+        with torch.no_grad():
+            self.tokenizer.eval()
+            x_txt = self.tokenizer(input_ids=x_txt_ids, attention_mask=x_txt_attn_mask,
+                                   output_cls_projected_embedding=False, return_dict=False)[0]
+            x_txt = F.normalize(x_txt, dim=1)
 
         # Prepare mask
         rand_time = torch.zeros((batch,)).float().uniform_(0, 1)
@@ -122,12 +137,15 @@ class ModelV2(nn.Module):
 
         batch_rand_perm = torch.rand((batch, seq_len)).argsort(dim=-1)
         mask = batch_rand_perm < rearrange(num_token_masked, 'b -> b 1')
+        mask = mask.to('cuda')
 
         # Mask image by setting masked indices to idx 1024 (curr codebook size is 0-1023)
         x = torch.where(mask, 1024, x_img)
+
         # Modify GT label by setting all unmasked (original) tokens to -1 (to ignore in loss)
         # shape [1024,]
-        labels = torch.where(mask, x_img, -1)
+        x_img_c = x_img.clone()
+        labels = torch.where(mask, x_img_c, -1)
 
         # Transform indices to image embeddings [B, 1024, Dmodel]
         image_embeddings = self.image_embedding(x)
@@ -148,7 +166,8 @@ class ModelV2(nn.Module):
 
         logits = self.final_dense(out)
 
-        loss = F.cross_entropy(input=rearrange(logits, 'b n c -> b c n'), target=labels, ignore_index=-1)
+        loss = F.cross_entropy(input=rearrange(logits, 'b n c -> b c n'), target=labels, ignore_index=-1,
+                               size_average=True)
 
         return loss, logits
 
@@ -163,8 +182,8 @@ class ModelV2(nn.Module):
         batch_size = x_txt.shape[0]
         shape = (batch_size, seq_len)
 
-        ids = torch.full(shape, fill_value=1024, dtype=torch.long)
-        scores = torch.zeros(shape, dtype=torch.float32)
+        ids = torch.full(shape, fill_value=1024, dtype=torch.long).to(self.device)
+        scores = torch.zeros(shape, dtype=torch.float32).to(self.device)
 
         # [B, T, Dmodel]
         txt_embed = self.text_projector(x_txt)
@@ -267,14 +286,25 @@ class FinalModelV2(L.LightningModule):
             lr: Learning rate for model
         """
         super(FinalModelV2, self).__init__()
-        self.model = ModelV2(model_args)
+        self.model = ModelV2(tokenizer=model_args['tokenizer'], decoder_args=model_args['DECODER'], projector_args=model_args['PROJECTOR'])
         self.lr = lr
 
     def training_step(self, batch, batch_idx):
         x_img, x_txt = batch
         loss, logits = self.model(x_img, x_txt)
 
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
+
+        e = self.current_epoch + 1
+        if batch_idx == 15:
+            if e == 29:
+                model_data = {'model': self.model.state_dict(),
+                              'opt': self.optimizers().state_dict()}
+
+                model_path = 'results/model1_'
+
+                torch.save(model_data, model_path + str(e) + '.pth')
+
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -282,12 +312,14 @@ class FinalModelV2(L.LightningModule):
 
         loss, logits = self.model(x_img, x_txt)
 
-        self.log("val_loss", loss)
+        self.log("val_loss", loss, prog_bar=True)
         return loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                                  patience=4)
+                                                                  patience=4,
+                                                                  min_lr=1e-8,
+                                                                  factor=0.5)
 
         return [optimizer], [{"scheduler": lr_scheduler, "interval": "epoch", "monitor": "val_loss"}]

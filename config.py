@@ -5,28 +5,33 @@ import torch
 
 cfg = {
     'DATA': {
-        'PATH': 'data/'
+        'TRAIN_PATH': 'data/image_names.pkl',
+        'TRAIN_TEXT_TOKEN_PATH': 'data/embeded_dicom_fixed.pkl',
+        'VAL_PATH': 'data/p10_image_names.pkl',
+        'VAL_TEXT_TOKEN_PATH': 'data/p10_embeded_dicom_fixed.pkl'
     },
     'CALLBACK': {
-        'dirpath': 'results/',
-        'save_top_k':2,
-        'monitor':'val_loss'
+        'dirpath': 'results/all_maskloss',
+        'save_top_k': 2,
+        'monitor': 'val_loss'
     },
     'LOGGER': {
         'save_dir': 'results/',
-        'name':'imglogs'
+        'name': 'imglogs'
     },
     'TRAIN': {
-        'model_def': 'ModelV1',
+        'model_def': 'ModelV2',
         'TRAINER': {
-            'max_epochs': 30,
-            'precision':16,
-            'enable_checkpointing':True,
-            'accelerator':'gpu',
-            'devices':int(torch.cuda.device_count()),
-            'strategy':'ddp_find_unused_parameters'
+            'max_epochs': 100,
+            'precision': 16,
+            'enable_checkpointing': True,
+            'accelerator': 'gpu',
+            'devices': int(torch.cuda.device_count()),
+            'strategy': 'ddp_find_unused_parameters_true'
         },
-        'LR': 5e-4
+        'LR': 1e-5,
+        'BATCH_SIZE': 16,
+        'DATA_PERC': 1.0  # Float between 0 and 1 for how much of total train-val data to use
     },
     'MODEL': {
         'ModelV1': {
@@ -55,22 +60,25 @@ cfg = {
         },
         'ModelV2': {
             'ENCODER': {
-                'WEIGHTS_PATH': 'data/pretrained_weights/vqgan/last.ckpt',
-                'CFG_PATH': 'data/pretrained_weights/vqgan/2021-12-17T08-58-54-project.yaml',
-                'CODEBOOK_PATH': 'data/pretrained_weights/vqgan/mimiccxr_vqgan1024_res512_codebook_indices.pickle'
+                'model_path': 'data/pretrained_weights/vqgan/last.ckpt',
+                'cfg_path': 'data/pretrained_weights/vqgan/2021-12-17T08-58-54-project.yaml',
+                'codebook_path': 'data/pretrained_weights/vqgan/mimiccxr_vqgan1024_res512_codebook_indices.pickle'
             },
             'DECODER': {
-                'embed_dim': 512,
-                'hidden_dim': 2048,
-                'n_heads': 4,
-                'n_layers': 4,
-                'dropout': 0.3,
-                'attention_type': 'fast',
+                'embed_dim': 1024,
+                'hidden_dim': 4096,
+                'n_heads': 8,
+                'n_layers': 6,
+                'dropout': 0.1,
+                'attention_type': 'normal',
                 'n_features': 256
             },
             'PROJECTOR': {
                 'txt_embed_dim': 768,
             }
         }
+    },
+    'WANDB': {
+        "MODE": 'online'  # One of {'online', 'offline', 'disabled'}
     }
 }

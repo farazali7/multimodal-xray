@@ -227,7 +227,7 @@ class MultiHeadAttentionBlock(nn.Module):
         super(MultiHeadAttentionBlock, self).__init__()
 
         if attention_type == 'normal':
-            self.mha = nn.MultiheadAttention(embed_dim, num_heads=n_heads, dropout=dropout)
+            self.mha = nn.MultiheadAttention(embed_dim, num_heads=n_heads, dropout=dropout, batch_first=True)
         elif attention_type == 'fast':
             assert n_features is not None, 'Parameter \'n_features\' must be supplied for FastAttention.'
             self.mha = MultiHeadFastAttention(embed_dim, n_heads, n_features, dropout=dropout)
