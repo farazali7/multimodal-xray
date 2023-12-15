@@ -38,7 +38,6 @@ doi = {10.1038/s41597-019-0322-0}
 ## Data Retrieval
 
 1. Navigate to [PhysioNet MIMIC-CXR Database](https://physionet.org/content/mimic-cxr/2.0.0/).
-@@ -6,3 +42,40 @@
 
    ```shell
    wget -r -N -c -np --user YOUR_USERNAME --ask-password https://physionet.org/files/mimic-cxr/2.0.0/
